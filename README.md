@@ -1,10 +1,5 @@
 # Flight Checker
 
-Using Go 1.13 (via brew)
-Created project by running: go mod init gitlab.com/chrisnappin/flightchecker
-
-todo - makefile and package structure
-
 ## Data Sources
 Provides airports with IATA codes, downloaded from https://ourairports.com/data/ (free, public domain)
 

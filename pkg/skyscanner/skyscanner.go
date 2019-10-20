@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"gitlab.com/chrisnappin/flightchecker/pkg/arguments"
+	"github.com/chrisnappin/flightchecker/pkg/arguments"
 )
 
 // Response is the top-level result

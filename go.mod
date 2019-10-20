@@ -1,4 +1,4 @@
-module gitlab.com/chrisnappin/flightchecker
+module github.com/chrisnappin/flightchecker
 
 go 1.13
 

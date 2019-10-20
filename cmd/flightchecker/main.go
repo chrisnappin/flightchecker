@@ -5,8 +5,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"gitlab.com/chrisnappin/flightchecker/pkg/arguments"
-	"gitlab.com/chrisnappin/flightchecker/pkg/skyscanner"
+	"github.com/chrisnappin/flightchecker/pkg/arguments"
+	"github.com/chrisnappin/flightchecker/pkg/skyscanner"
 )
 
 func main() {
