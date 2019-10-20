@@ -1,0 +1,11 @@
+{
+    "Origin": "LHR-sky",
+	"Destination": "LAX-sky",
+	"Adults": 2,
+	"Children": 2,
+	"Infants": 0,
+	"OutboundDate": "2019-11-01",
+	"InboundDate": "2019-11-10",
+    "APIHost": "skyscanner-skyscanner-flight-search-v1.p.rapidapi.com",
+    "APIKey": "57673f9055mshd1f1486c7ee584ep18bc6cjsnc32884c5afa1"
+}
