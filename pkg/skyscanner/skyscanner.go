@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/chrisnappin/flightchecker/pkg/arguments"
+	"github.com/sirupsen/logrus"
 )
 
 // Response is the top-level result
@@ -202,10 +202,56 @@ func (q *QuoteFinder) FindFlightQuotes(arguments *arguments.Arguments) {
 }
 
 func (q *QuoteFinder) outputQuotes(response *Response) {
+	// maps agent id to agent name
+	agents := make(map[int]string)
+	for _, agent := range response.Agents {
+		agents[agent.ID] = agent.Name
+	}
+
+	// maps leg id to Leg
+	legs := make(map[string]Leg)
+	for _, leg := range response.Legs {
+		legs[leg.ID] = leg
+	}
+
+	// maps segment id to Segment
+	segments := make(map[int]Segment)
+	for _, segment := range response.Segments {
+		segments[segment.ID] = segment
+	}
+
+	// maps carrier id to Carrier
+	carriers := make(map[int]Carrier)
+	for _, carrier := range response.Carriers {
+		carriers[carrier.ID] = carrier
+	}
+
 	q.logger.Infof("Quote completed, found %d flights", len(response.Itineraries))
 	for _, itinerary := range response.Itineraries {
 		for _, pricingOption := range itinerary.PricingOptions {
-			q.logger.Infof("Flight costs %.2f\n", pricingOption.Price)
+			for _, agentID := range pricingOption.Agents {
+				q.logger.Infof("Flight with %s is %.2f\n", agents[agentID], pricingOption.Price)
+
+				outboundLeg := legs[itinerary.OutboundLegID]
+				q.logger.Infof("Outbound Leg: from %s to %s (%d minutes)",
+					outboundLeg.Departure, outboundLeg.Arrival, outboundLeg.Duration)
+				for index, segmentID := range outboundLeg.SegmentIds {
+					segment := segments[segmentID]
+					q.logger.Infof("Outbound segment %d is flight %s from %s to %s (%d minutes) with %s (%s)",
+						index, segment.FlightNumber, segment.DepartureDateTime, segment.ArrivalDateTime,
+						segment.Duration, carriers[segment.Carrier].Name, carriers[segment.Carrier].Code)
+				}
+
+				inboundLeg := legs[itinerary.InboundLegID]
+				q.logger.Infof("Inbound Leg: from %s to %s (%d minutes)",
+					inboundLeg.Departure, inboundLeg.Arrival, inboundLeg.Duration)
+				for index, segmentID := range inboundLeg.SegmentIds {
+					segment := segments[segmentID]
+					q.logger.Infof("Inbound segment %d is flight %s from %s to %s (%d minutes) with %s (%s)",
+						index, segment.FlightNumber, segment.DepartureDateTime, segment.ArrivalDateTime,
+						segment.Duration, carriers[segment.Carrier].Name, carriers[segment.Carrier].Code)
+				}
+			}
 		}
 	}
 }
@@ -273,7 +319,7 @@ func (q *QuoteFinder) startSearch(arguments *arguments.Arguments) (string, error
 	//groupPricing := false // group = price for all, false = price for 1 adult
 
 	payload := strings.NewReader(fmt.Sprintf("inboundDate=%s&cabinClass=%s&children=%d&infants=%d&country=%s&"+
-		"currency=%s&locale=%s&originPlace=%s&destinationPlace=%s&outboundDate=%s&adults=%d",
+		"currency=%s&locale=%s&originPlace=%s-sky&destinationPlace=%s-sky&outboundDate=%s&adults=%d",
 		arguments.InboundDate, cabinClass, arguments.Children, arguments.Infants, country, currency, locale,
 		arguments.Origin, arguments.Destination, arguments.OutboundDate, arguments.Adults))
 

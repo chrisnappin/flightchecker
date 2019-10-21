@@ -2,14 +2,16 @@ package logwrapper
 
 import (
 	"os"
+
 	"github.com/sirupsen/logrus"
 )
 
+// NewLogger creates a logger with the specified name.
 func NewLogger(name string, debug bool) *logrus.Entry {
 	logger := logrus.New()
 
 	if debug {
-	    logger.SetLevel(logrus.DebugLevel)
+		logger.SetLevel(logrus.DebugLevel)
 
 		// adds func and file fields, has small runtime overhead
 		// logger.SetReportCaller(true)
@@ -19,9 +21,9 @@ func NewLogger(name string, debug bool) *logrus.Entry {
 
 	logger.SetOutput(os.Stdout)
 	logger.SetFormatter(&logrus.TextFormatter{
-		DisableColors: true, // sets logfmt format
+		// DisableColors: true, // sets logfmt format
 		FullTimestamp: true,
 	})
 
-	return logger.WithFields(logrus.Fields{ "name": name })
+	return logger.WithFields(logrus.Fields{"name": name})
 }
