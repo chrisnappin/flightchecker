@@ -19,11 +19,11 @@ type Airport struct {
 
 // Loader handles loading data.
 type Loader struct {
-	logger *logrus.Logger
+	logger *logrus.Entry
 }
 
 // NewLoader creates a new instance.
-func NewLoader(logger *logrus.Logger) *Loader {
+func NewLoader(logger *logrus.Entry) *Loader {
 	return &Loader{logger}
 }
 

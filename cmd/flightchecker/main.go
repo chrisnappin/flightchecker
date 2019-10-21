@@ -3,34 +3,13 @@ package main
 import (
 	"os"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/chrisnappin/flightchecker/pkg/arguments"
+	"github.com/chrisnappin/flightchecker/pkg/logwrapper"
 	"github.com/chrisnappin/flightchecker/pkg/skyscanner"
 )
 
 func main() {
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	logger.SetOutput(os.Stdout)
-	logger.Info("Hello world...")
-
-	// loader := data.NewLoader(logger)
-
-	// countries, err := loader.ReadCountries("data/airports/countries.csv")
-	// if err != nil {
-	// 	logger.Fatal(err)
-	// }
-
-	// regions, err := loader.ReadRegions("data/airports/regions.csv")
-	// if err != nil {
-	// 	logger.Fatal(err)
-	// }
-
-	// airports, err := loader.ReadAirports("data/airports/airports.csv", countries, regions)
-	// if err != nil {
-	// 	logger.Fatal(err)
-	// }
+	logger := logwrapper.NewLogger("flightchecker", true)
 
 	arguments, err := arguments.Load("arguments.json")
 	if err != nil {
@@ -38,7 +17,7 @@ func main() {
 	}
 	logger.Infof("Read arguments: %+v", arguments)
 
-	quoteFinder := skyscanner.NewQuoteFinder(logger)
+	quoteFinder := skyscanner.NewQuoteFinder(logwrapper.NewLogger("skyscanner", true))
 	quoteFinder.FindFlightQuotes(arguments)
 
 	os.Exit(0)

@@ -147,11 +147,11 @@ type Currency struct {
 
 // QuoteFinder handles finding quotes.
 type QuoteFinder struct {
-	logger *logrus.Logger
+	logger *logrus.Entry
 }
 
 // NewQuoteFinder creates a new instance.
-func NewQuoteFinder(logger *logrus.Logger) *QuoteFinder {
+func NewQuoteFinder(logger *logrus.Entry) *QuoteFinder {
 	return &QuoteFinder{logger}
 }
 
