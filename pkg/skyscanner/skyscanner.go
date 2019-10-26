@@ -312,19 +312,8 @@ func (q *QuoteFinder) pollForQuotes(sessionKey string, apiHost string, apiKey st
 func (q *QuoteFinder) startSearch(arguments *arguments.Arguments) (string, error) {
 	url := "https://" + arguments.APIHost + "/apiservices/pricing/v1.0"
 
-	country := "GB"
-	currency := "GBP"
-	locale := "en-GB"
-	cabinClass := "economy" // economy, premiumeconomy, business, first
-	//groupPricing := false // group = price for all, false = price for 1 adult
-
-	payload := strings.NewReader(fmt.Sprintf("inboundDate=%s&cabinClass=%s&children=%d&infants=%d&country=%s&"+
-		"currency=%s&locale=%s&originPlace=%s-sky&destinationPlace=%s-sky&outboundDate=%s&adults=%d",
-		arguments.InboundDate, cabinClass, arguments.Children, arguments.Infants, country, currency, locale,
-		arguments.Origin, arguments.Destination, arguments.OutboundDate, arguments.Adults))
-
 	q.logger.Debugln("POST flight search to create session...")
-	req, err := http.NewRequest("POST", url, payload)
+	req, err := http.NewRequest("POST", url, strings.NewReader(q.formatSearchPayload(arguments)))
 	if err != nil {
 		return "", err
 	}
@@ -337,26 +326,11 @@ func (q *QuoteFinder) startSearch(arguments *arguments.Arguments) (string, error
 	if err != nil {
 		return "", nil
 	}
-	//fmt.Println("Response received...")
-	// defer res.Body.Close()
-	// body, err := ioutil.ReadAll(res.Body)
-	// _, err = ioutil.ReadAll(res.Body)
-	// if err != nil {
-	// 	return "", nil
-	// }
 
 	if res.StatusCode != 201 {
 		q.logInvalidResponse(res)
 		return "", errors.New("Request rejected")
 	}
-	//fmt.Printf("Response code: %d, content length: %d\n", res.StatusCode, res.ContentLength)
-	//fmt.Println("Headers are:")
-	// for key, values := range res.Header {
-	// 	for index, value := range values {
-	// 		fmt.Printf("    %s [%d] => %s\n", key, index, value)
-	// 	}
-	// }
-	// fmt.Printf("\nResponse body is: [%s]", string(body))
 
 	// in practice this returns 201, with body of "{}"
 	// Location [0] http header in response is of the form:
@@ -368,6 +342,20 @@ func (q *QuoteFinder) startSearch(arguments *arguments.Arguments) (string, error
 	q.logger.Infof("The session key is %s\n", key)
 
 	return key, nil
+}
+
+func (q *QuoteFinder) formatSearchPayload(arguments *arguments.Arguments) string {
+	country := "GB"
+	currency := "GBP"
+	locale := "en-GB"
+	cabinClass := "economy" // economy, premiumeconomy, business, first
+	groupPricing := true    // true = price for all, false = price for 1 adult
+
+	return fmt.Sprintf("inboundDate=%s&cabinClass=%s&children=%d&infants=%d&country=%s&"+
+		"currency=%s&locale=%s&originPlace=%s-sky&destinationPlace=%s-sky&outboundDate=%s&adults=%d&groupPricing=%t",
+		arguments.InboundDate, cabinClass, arguments.Children, arguments.Infants, country, currency, locale,
+		arguments.Origin, arguments.Destination, arguments.OutboundDate, arguments.Adults, groupPricing)
+
 }
 
 func (q *QuoteFinder) logInvalidResponse(res *http.Response) {
