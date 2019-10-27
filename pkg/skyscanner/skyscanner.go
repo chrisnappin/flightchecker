@@ -338,10 +338,16 @@ func (q *QuoteFinder) startSearch(arguments *arguments.Arguments) (string, error
 	// can't actually use this (gives a 403) but need to extract the session key from the end of the url
 	// then perform a GET using this to get the actual quotes...
 	location := res.Header.Get("Location")
-	key := location[strings.LastIndex(location, "/")+1 : len(location)]
-	q.logger.Infof("The session key is %s\n", key)
-
-	return key, nil
+	if location != "" {
+		lastIndex := strings.LastIndex(location, "/")
+		if lastIndex != -1 {
+			key := location[lastIndex+1 : len(location)]
+			q.logger.Infof("The session key is %s\n", key)
+			return key, nil
+		}
+		return "", errors.New("No session key found in URL: " + location)
+	}
+	return "", errors.New("No Location returned in response")
 }
 
 func (q *QuoteFinder) formatSearchPayload(arguments *arguments.Arguments) string {

@@ -6,25 +6,100 @@ import (
 	"github.com/chrisnappin/flightchecker/pkg/arguments"
 	"github.com/chrisnappin/flightchecker/pkg/logwrapper"
 	"github.com/stretchr/testify/assert"
+	gock "gopkg.in/h2non/gock.v1"
 )
 
+var dummyArguments = arguments.Arguments{
+	Origin:       "LHR",
+	Destination:  "LAX",
+	Adults:       2,
+	Children:     2,
+	Infants:      0,
+	OutboundDate: "2019-11-01",
+	InboundDate:  "2019-11-10",
+	APIHost:      "test.com",
+	APIKey:       "testKey",
+}
+
+// TestFormatSearchPayload tests formatting the payload of search parameters.
 func TestFormatSearchPayload(t *testing.T) {
-	arguments := arguments.Arguments{
-		Origin:       "LHR",
-		Destination:  "LAX",
-		Adults:       2,
-		Children:     2,
-		Infants:      0,
-		OutboundDate: "2019-11-01",
-		InboundDate:  "2019-11-10",
-		APIHost:      "test.com",
-		APIKey:       "testKey",
-	}
-	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("skyscanner", true))
-	actual := quoteFinder.formatSearchPayload(&arguments)
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+	actual := quoteFinder.formatSearchPayload(&dummyArguments)
 
 	expected := "inboundDate=2019-11-10&cabinClass=economy&children=2&infants=0&country=GB&currency=GBP&locale=en-GB" +
 		"&originPlace=LHR-sky&destinationPlace=LAX-sky&outboundDate=2019-11-01&adults=2&groupPricing=true"
 
 	assert.Equal(t, expected, actual, "Incorrect payload")
+}
+
+// TestStartSearch_HappyPath tests starting a search, when the response is success.
+func TestStartSearch_HappyPath(t *testing.T) {
+	defer gock.Off()
+
+	gock.New("https://test.com").
+		Post("/apiservices/pricing/v1.0").
+		HeaderPresent("x-rapidapi-host").
+		HeaderPresent("x-rapidapi-key").
+		Reply(201).
+		AddHeader("Location", "https://test.com/aaa/bbb/ccc/abc")
+
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+
+	sessionKey, err := quoteFinder.startSearch(&dummyArguments)
+	assert.Nil(t, err, "No error expected")
+	assert.Equal(t, "abc", sessionKey, "Invalid session key")
+	assert.Equal(t, gock.IsDone(), true)
+}
+
+// TestStartSearch_NoLocation tests starting a search, when the response doesn't include a Location header.
+func TestStartSearch_NoLocation(t *testing.T) {
+	defer gock.Off()
+
+	gock.New("https://test.com").
+		Post("/apiservices/pricing/v1.0").
+		HeaderPresent("x-rapidapi-host").
+		HeaderPresent("x-rapidapi-key").
+		Reply(201)
+
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+
+	sessionKey, err := quoteFinder.startSearch(&dummyArguments)
+	assert.Error(t, err, "Error expected")
+	assert.Equal(t, "", sessionKey, "No session key expected")
+	assert.Equal(t, gock.IsDone(), true)
+}
+
+// TestStartSearch_NoSessionKey tests starting a search, when the response has no session key.
+func TestStartSearch_NoSessionKey(t *testing.T) {
+	defer gock.Off()
+
+	gock.New("https://test.com").
+		Post("/apiservices/pricing/v1.0").
+		HeaderPresent("x-rapidapi-host").
+		HeaderPresent("x-rapidapi-key").
+		Reply(201).
+		AddHeader("Location", "wibble") // no / character...
+
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+
+	sessionKey, err := quoteFinder.startSearch(&dummyArguments)
+	assert.Error(t, err, "Error expected")
+	assert.Equal(t, "", sessionKey, "No session key expected")
+	assert.Equal(t, gock.IsDone(), true)
+}
+
+// TestStartSearch_Rejected tests starting a search, when the response is unauthorized.
+func TestStartSearch_Rejected(t *testing.T) {
+	defer gock.Off()
+
+	gock.New("https://test.com").
+		Post("/apiservices/pricing/v1.0").
+		Reply(401)
+
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+
+	sessionKey, err := quoteFinder.startSearch(&dummyArguments)
+	assert.Error(t, err, "Error expected")
+	assert.Equal(t, "", sessionKey, "No session key expected")
+	assert.Equal(t, gock.IsDone(), true)
 }
