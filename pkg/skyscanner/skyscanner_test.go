@@ -5,6 +5,7 @@ import (
 
 	"github.com/chrisnappin/flightchecker/pkg/arguments"
 	"github.com/chrisnappin/flightchecker/pkg/logwrapper"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFormatSearchPayload(t *testing.T) {
@@ -20,13 +21,10 @@ func TestFormatSearchPayload(t *testing.T) {
 		APIKey:       "testKey",
 	}
 	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("skyscanner", true))
-	payload := quoteFinder.formatSearchPayload(&arguments)
+	actual := quoteFinder.formatSearchPayload(&arguments)
 
 	expected := "inboundDate=2019-11-10&cabinClass=economy&children=2&infants=0&country=GB&currency=GBP&locale=en-GB" +
 		"&originPlace=LHR-sky&destinationPlace=LAX-sky&outboundDate=2019-11-01&adults=2&groupPricing=true"
 
-	if payload != expected {
-		// report error and stop the testsuite
-		t.Fatalf("Unexpected result %s", payload)
-	}
+	assert.Equal(t, expected, actual, "Incorrect payload")
 }
