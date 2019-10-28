@@ -258,8 +258,8 @@ func (q *QuoteFinder) outputQuotes(response *Response) {
 
 // pollForQuotes calls the skyscanner "Poll session results" operation, to look for quotes
 func (q *QuoteFinder) pollForQuotes(sessionKey string, apiHost string, apiKey string) (*Response, error) {
-	pageIndex := 0
-	pageSize := 10
+	const pageIndex = 0
+	const pageSize = 10
 
 	q.logger.Debugf("GET first page of %d quotes...\n", pageSize)
 	url := fmt.Sprintf("https://%s/apiservices/pricing/uk2/v1.0/%%7B%s%%7D?pageIndex=%d&pageSize=%d",
@@ -285,15 +285,6 @@ func (q *QuoteFinder) pollForQuotes(sessionKey string, apiHost string, apiKey st
 		return nil, err
 	}
 
-	// q.logger.Debugf("Response code: %d, content length: %d\n", res.StatusCode, res.ContentLength)
-	// fmt.Println("Headers are:")
-	// for key, values := range res.Header {
-	// 	for index, value := range values {
-	// 		fmt.Printf("    %s [%d] => %s\n", key, index, value)
-	// 	}
-	// }
-	// fmt.Printf("Response body is: [%s]\n", string(body))
-
 	if res.StatusCode != 200 {
 		q.logInvalidResponse(res)
 		return nil, errors.New("Request rejected")
@@ -304,7 +295,6 @@ func (q *QuoteFinder) pollForQuotes(sessionKey string, apiHost string, apiKey st
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("\nSuccessfully unmarshalled to JSON\n\n\nValue is %v", r)
 	return &r, nil
 }
 

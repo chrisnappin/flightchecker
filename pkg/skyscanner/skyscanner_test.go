@@ -116,3 +116,68 @@ func TestStartSearch_Rejected(t *testing.T) {
 	assert.Equal(t, "", sessionKey, "No session key expected")
 	assert.Equal(t, gock.IsDone(), true)
 }
+
+// TestPollForQuote_HappyPath tests polling for quotes, when the response is success.
+func TestPollForQuote_HappyPath(t *testing.T) {
+	defer gock.Off()
+
+	expected := Response{
+		SessionKey: "abc",
+		Query: Query{
+			Country:  "GB",
+			Currency: "GBP",
+			Locale:   "en-GB",
+		},
+	}
+
+	gock.New("https://test.com/apiservices/pricing/uk2/v1.0/%7Babc%7D").
+		MatchParam("pageIndex", "0").
+		MatchParam("pageSize", "10").
+		HeaderPresent("x-rapidapi-host").
+		HeaderPresent("x-rapidapi-key").
+		Reply(200).
+		JSON(expected)
+
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+
+	actual, err := quoteFinder.pollForQuotes("abc", "test.com", "testKey")
+	assert.Nil(t, err, "No error expected")
+	assert.EqualValues(t, &expected, actual, "Invalid response")
+	assert.Equal(t, gock.IsDone(), true)
+}
+
+// TestPollForQuote_ServerError tests polling for quotes, when the response is a server error.
+func TestPollForQuote_ServerError(t *testing.T) {
+	defer gock.Off()
+
+	gock.New("https://test.com/apiservices/pricing/uk2/v1.0/%7Babc%7D").
+		MatchParam("pageIndex", "0").
+		MatchParam("pageSize", "10").
+		Reply(500).
+		BodyString("Oops")
+
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+
+	actual, err := quoteFinder.pollForQuotes("abc", "test.com", "testKey")
+	assert.Error(t, err, "Error expected")
+	assert.Nil(t, actual, "No response expected")
+	assert.Equal(t, gock.IsDone(), true)
+}
+
+// TestPollForQuote_InvalidResponse tests polling for quotes, when the response is invalid JSON.
+func TestPollForQuote_InvalidResponse(t *testing.T) {
+	defer gock.Off()
+
+	gock.New("https://test.com/apiservices/pricing/uk2/v1.0/%7Babc%7D").
+		MatchParam("pageIndex", "0").
+		MatchParam("pageSize", "10").
+		Reply(200).
+		BodyString("{\"wibble\":1234,") // un-terminated JSON
+
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+
+	actual, err := quoteFinder.pollForQuotes("abc", "test.com", "testKey")
+	assert.Error(t, err, "Error expected")
+	assert.Nil(t, actual, "No response expected")
+	assert.Equal(t, gock.IsDone(), true)
+}
