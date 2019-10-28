@@ -11,8 +11,9 @@ import (
 
 func main() {
 	logger := logwrapper.NewLogger("flightchecker", true)
+	loader := data.NewLoader(logwrapper.NewLogger("data", true))
 
-	airports, err := loadAirports()
+	airports, err := loader.ReadMajorAirports()
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -45,28 +46,4 @@ func main() {
 	quoteFinder.FindFlightQuotes(arguments)
 
 	os.Exit(0)
-}
-
-func loadAirports() (map[string]data.Airport, error) {
-	loader := data.NewLoader(logwrapper.NewLogger("data", true))
-	countries, err := loader.ReadCountries("data/airports/countries.csv")
-	if err != nil {
-		return nil, err
-	}
-
-	regions, err := loader.ReadRegions("data/airports/regions.csv")
-	if err != nil {
-		return nil, err
-	}
-
-	airports, err := loader.ReadAirports("data/airports/airports.csv", countries, regions)
-	if err != nil {
-		return nil, err
-	}
-
-	airportsMap := make(map[string]data.Airport)
-	for _, airport := range airports {
-		airportsMap[airport.IataCode] = airport
-	}
-	return airportsMap, nil
 }

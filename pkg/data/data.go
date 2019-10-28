@@ -27,9 +27,39 @@ func NewLoader(logger *logrus.Entry) *Loader {
 	return &Loader{logger}
 }
 
+// ReadMajorAirports returns a map of all major airports, keyed by IATA code
+func (l *Loader) ReadMajorAirports() (map[string]Airport, error) {
+	countries, err := l.readCountries("data/airports/countries.csv")
+	if err != nil {
+		return nil, err
+	}
+
+	regions, err := l.readRegions("data/airports/regions.csv")
+	if err != nil {
+		return nil, err
+	}
+
+	airports, err := l.readAirports("data/airports/airports.csv", countries, regions)
+	if err != nil {
+		return nil, err
+	}
+	return airports, nil
+}
+
+// Filter returns an array of values that pass a filter function
+func (l *Loader) Filter(airports map[string]Airport, f func(Airport) bool) []Airport {
+	filteredValues := make([]Airport, 0)
+	for _, value := range airports {
+		if f(value) {
+			filteredValues = append(filteredValues, value)
+		}
+	}
+	return filteredValues
+}
+
 // ReadCountries returns a map of countries, keyed by country code.
 // The data is read from the specified CSV file.
-func (l *Loader) ReadCountries(filename string) (map[string]string, error) {
+func (l *Loader) readCountries(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 2
 
@@ -55,7 +85,7 @@ func (l *Loader) ReadCountries(filename string) (map[string]string, error) {
 
 // ReadRegions returns a map of regions, keyed by region code.
 // The data is read from the specified CSV file.
-func (l *Loader) ReadRegions(filename string) (map[string]string, error) {
+func (l *Loader) readRegions(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 3
 
@@ -81,7 +111,7 @@ func (l *Loader) ReadRegions(filename string) (map[string]string, error) {
 
 // ReadAirports returns a slice of Airports, with country and region names populated.
 // The data is read from the specified CSV file.
-func (l *Loader) ReadAirports(filename string, countries map[string]string, regions map[string]string) ([]Airport, error) {
+func (l *Loader) readAirports(filename string, countries map[string]string, regions map[string]string) (map[string]Airport, error) {
 	const indexName = 3
 	const indexCountryCode = 8
 	const indexRegionCode = 9
@@ -93,7 +123,7 @@ func (l *Loader) ReadAirports(filename string, countries map[string]string, regi
 	}
 	defer csvFile.Close()
 	reader := csv.NewReader(bufio.NewReader(csvFile))
-	var airports []Airport
+	airports := make(map[string]Airport)
 	for {
 		line, err := reader.Read()
 		if err == io.EOF {
@@ -115,12 +145,12 @@ func (l *Loader) ReadAirports(filename string, countries map[string]string, regi
 				l.logger.Fatalf("Regions missing name for code %s", line[indexRegionCode])
 			}
 
-			airports = append(airports, Airport{
+			airports[iataCode] = Airport{
 				Name:     line[indexName],
 				IataCode: iataCode,
 				Country:  countryName,
 				Region:   regionName,
-			})
+			}
 		}
 	}
 	l.logger.Debugf("Read %d airports", len(airports))
