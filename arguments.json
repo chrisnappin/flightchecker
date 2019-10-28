@@ -1,11 +1,11 @@
 {
-    "Origin": "LHR-sky",
-	"Destination": "LAX-sky",
+    "Origin": "LHR",
+	"Destination": "LAX",
 	"Adults": 2,
 	"Children": 2,
 	"Infants": 0,
 	"OutboundDate": "2019-11-01",
-	"InboundDate": "2019-11-10",
+	"HolidayDuration": 14,
     "APIHost": "...",
     "APIKey": "..."
 }

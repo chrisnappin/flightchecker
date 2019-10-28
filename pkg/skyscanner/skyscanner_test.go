@@ -10,26 +10,39 @@ import (
 )
 
 var dummyArguments = arguments.Arguments{
-	Origin:       "LHR",
-	Destination:  "LAX",
-	Adults:       2,
-	Children:     2,
-	Infants:      0,
-	OutboundDate: "2019-11-01",
-	InboundDate:  "2019-11-10",
-	APIHost:      "test.com",
-	APIKey:       "testKey",
+	Origin:          "LHR",
+	Destination:     "LAX",
+	Adults:          2,
+	Children:        2,
+	Infants:         0,
+	OutboundDate:    "2019-11-01",
+	HolidayDuration: 9,
+	APIHost:         "test.com",
+	APIKey:          "testKey",
 }
 
-// TestFormatSearchPayload tests formatting the payload of search parameters.
-func TestFormatSearchPayload(t *testing.T) {
-	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
-	actual := quoteFinder.formatSearchPayload(&dummyArguments)
-
+// TestFormatSearchPayload tests formatting the payload of search parameters, with valid input.
+func TestFormatSearchPayload_AllValid(t *testing.T) {
 	expected := "inboundDate=2019-11-10&cabinClass=economy&children=2&infants=0&country=GB&currency=GBP&locale=en-GB" +
 		"&originPlace=LHR-sky&destinationPlace=LAX-sky&outboundDate=2019-11-01&adults=2&groupPricing=true"
 
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+	actual, err := quoteFinder.formatSearchPayload(&dummyArguments)
+
 	assert.Equal(t, expected, actual, "Incorrect payload")
+	assert.Nil(t, err, "Error not expected")
+}
+
+// TestFormatSearchPayload tests formatting the payload of search parameters, with invalid input.
+func TestFormatSearchPayload_InvalidDate(t *testing.T) {
+	brokenArguments := dummyArguments           // struct of primitives so can copy by value
+	brokenArguments.OutboundDate = "01/02/2003" // not YYYY-MM-DD
+
+	quoteFinder := NewQuoteFinder(logwrapper.NewLogger("test", true))
+	actual, err := quoteFinder.formatSearchPayload(&brokenArguments)
+
+	assert.Equal(t, "", actual, "No payload expected")
+	assert.Error(t, err, "Error expected")
 }
 
 // TestStartSearch_HappyPath tests starting a search, when the response is success.

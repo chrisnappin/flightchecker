@@ -313,7 +313,12 @@ func (q *QuoteFinder) startSearch(arguments *arguments.Arguments) (string, error
 	url := "https://" + arguments.APIHost + "/apiservices/pricing/v1.0"
 
 	q.logger.Debugln("POST flight search to create session...")
-	req, err := http.NewRequest("POST", url, strings.NewReader(q.formatSearchPayload(arguments)))
+	payload, err := q.formatSearchPayload(arguments)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest("POST", url, strings.NewReader(payload))
 	if err != nil {
 		return "", err
 	}
@@ -350,17 +355,24 @@ func (q *QuoteFinder) startSearch(arguments *arguments.Arguments) (string, error
 	return "", errors.New("No Location returned in response")
 }
 
-func (q *QuoteFinder) formatSearchPayload(arguments *arguments.Arguments) string {
-	country := "GB"
-	currency := "GBP"
-	locale := "en-GB"
-	cabinClass := "economy" // economy, premiumeconomy, business, first
-	groupPricing := true    // true = price for all, false = price for 1 adult
+func (q *QuoteFinder) formatSearchPayload(arguments *arguments.Arguments) (string, error) {
+	const country = "GB"
+	const currency = "GBP"
+	const locale = "en-GB"
+	const cabinClass = "economy"    // economy, premiumeconomy, business, first
+	const groupPricing = true       // true = price for all, false = price for 1 adult
+	const dateFormat = "2006-01-02" // i.e. YYYY-MM-DD
+
+	holidayStartDate, err := time.Parse(dateFormat, arguments.OutboundDate)
+	if err != nil {
+		return "", err
+	}
+	holidayEndDate := holidayStartDate.AddDate(0, 0, arguments.HolidayDuration)
 
 	return fmt.Sprintf("inboundDate=%s&cabinClass=%s&children=%d&infants=%d&country=%s&"+
 		"currency=%s&locale=%s&originPlace=%s-sky&destinationPlace=%s-sky&outboundDate=%s&adults=%d&groupPricing=%t",
-		arguments.InboundDate, cabinClass, arguments.Children, arguments.Infants, country, currency, locale,
-		arguments.Origin, arguments.Destination, arguments.OutboundDate, arguments.Adults, groupPricing)
+		holidayEndDate.Format(dateFormat), cabinClass, arguments.Children, arguments.Infants, country, currency, locale,
+		arguments.Origin, arguments.Destination, arguments.OutboundDate, arguments.Adults, groupPricing), nil
 
 }
 

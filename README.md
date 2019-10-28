@@ -29,5 +29,5 @@ Run `go task ./...` where `task` can be
 * get => downloads and install code or modules (to the $GOPATH)
   * e.g. `go get github.com/sirupsen/logrus` (uses latest version) - updates `go.mod`
 * build => compiles all code, but throws away the results
-* test => compiles and runs all tests, caches results from unchanged tests
+* test => compiles and runs all tests, caches results from unchanged tests (add `-cover` for coverage stats)
 * install => compiles all code, writes them to `~/go/bin`
