@@ -145,14 +145,18 @@ type Currency struct {
 	DecimalDigits               int // e.g. 2
 }
 
+type QuoteFinder interface {
+	FindFlightQuotes(*arguments.Arguments)
+}
+
 // QuoteFinder handles finding quotes.
-type QuoteFinder struct {
+type skyscannerQuoteFinder struct {
 	logger *logrus.Entry
 }
 
 // NewQuoteFinder creates a new instance.
-func NewQuoteFinder(logger *logrus.Entry) *QuoteFinder {
-	return &QuoteFinder{logger}
+func NewQuoteFinder(logger *logrus.Entry) QuoteFinder {
+	return &skyscannerQuoteFinder{logger}
 }
 
 const (
@@ -160,7 +164,7 @@ const (
 )
 
 // FindFlightQuotes calls the skyscanner API to find some flight quotes.
-func (q *QuoteFinder) FindFlightQuotes(arguments *arguments.Arguments) {
+func (q *skyscannerQuoteFinder) FindFlightQuotes(arguments *arguments.Arguments) {
 
 	/*
 	 * The way the skyscanner API works is that we first make our search,
@@ -201,7 +205,7 @@ func (q *QuoteFinder) FindFlightQuotes(arguments *arguments.Arguments) {
 	}
 }
 
-func (q *QuoteFinder) outputQuotes(response *Response) {
+func (q *skyscannerQuoteFinder) outputQuotes(response *Response) {
 	// maps agent id to agent name
 	agents := make(map[int]string)
 	for _, agent := range response.Agents {
@@ -257,7 +261,7 @@ func (q *QuoteFinder) outputQuotes(response *Response) {
 }
 
 // pollForQuotes calls the skyscanner "Poll session results" operation, to look for quotes
-func (q *QuoteFinder) pollForQuotes(sessionKey string, apiHost string, apiKey string) (*Response, error) {
+func (q *skyscannerQuoteFinder) pollForQuotes(sessionKey string, apiHost string, apiKey string) (*Response, error) {
 	const pageIndex = 0
 	const pageSize = 10
 
@@ -299,7 +303,7 @@ func (q *QuoteFinder) pollForQuotes(sessionKey string, apiHost string, apiKey st
 }
 
 // startSearch calls the skyscanner "Create session" operation, which returns a session key.
-func (q *QuoteFinder) startSearch(arguments *arguments.Arguments) (string, error) {
+func (q *skyscannerQuoteFinder) startSearch(arguments *arguments.Arguments) (string, error) {
 	url := "https://" + arguments.APIHost + "/apiservices/pricing/v1.0"
 
 	q.logger.Debugln("POST flight search to create session...")
@@ -345,7 +349,7 @@ func (q *QuoteFinder) startSearch(arguments *arguments.Arguments) (string, error
 	return "", errors.New("No Location returned in response")
 }
 
-func (q *QuoteFinder) formatSearchPayload(arguments *arguments.Arguments) (string, error) {
+func (q *skyscannerQuoteFinder) formatSearchPayload(arguments *arguments.Arguments) (string, error) {
 	const country = "GB"
 	const currency = "GBP"
 	const locale = "en-GB"
@@ -366,7 +370,7 @@ func (q *QuoteFinder) formatSearchPayload(arguments *arguments.Arguments) (strin
 
 }
 
-func (q *QuoteFinder) logInvalidResponse(res *http.Response) {
+func (q *skyscannerQuoteFinder) logInvalidResponse(res *http.Response) {
 	q.logger.Errorf("Request rejected with %s", res.Status)
 
 	if res.ContentLength != 0 {

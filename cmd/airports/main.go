@@ -13,12 +13,12 @@ func main() {
 	logger := logwrapper.NewLogger("airports", true)
 	loader := data.NewLoader(logwrapper.NewLogger("data", true))
 
-	loadAndFilterAirports(logger, loader)
+	LoadAndFilterAirports(logger, loader)
 
 	os.Exit(0)
 }
 
-func loadAndFilterAirports(logger *logrus.Entry, loader *data.Loader) {
+func LoadAndFilterAirports(logger *logrus.Entry, loader data.Loader) {
 	airports, err := loader.ReadMajorAirports()
 	if err != nil {
 		logger.Fatal(err)

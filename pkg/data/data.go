@@ -9,6 +9,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Loader handles being able to load airport data
+type Loader interface {
+	ReadMajorAirports() (map[string]Airport, error)
+	Filter(airports map[string]Airport, f func(Airport) bool) []Airport
+}
+
 // Airport includes details of each airport.
 type Airport struct {
 	Name     string
@@ -17,18 +23,20 @@ type Airport struct {
 	Region   string
 }
 
-// Loader handles loading data.
-type Loader struct {
+// airportDataLoader handles loading data.
+// This is a private struct only instantiable via a factory method.
+type airportDataLoader struct {
 	logger *logrus.Entry
 }
 
 // NewLoader creates a new instance.
-func NewLoader(logger *logrus.Entry) *Loader {
-	return &Loader{logger}
+// This is a factory method (aka constructor) returning an interface.
+func NewLoader(logger *logrus.Entry) Loader {
+	return &airportDataLoader{logger}
 }
 
 // ReadMajorAirports returns a map of all major airports, keyed by IATA code
-func (l *Loader) ReadMajorAirports() (map[string]Airport, error) {
+func (l *airportDataLoader) ReadMajorAirports() (map[string]Airport, error) {
 	countries, err := l.readCountries("data/airports/countries.csv")
 	if err != nil {
 		return nil, err
@@ -47,7 +55,7 @@ func (l *Loader) ReadMajorAirports() (map[string]Airport, error) {
 }
 
 // Filter returns an array of values that pass a filter function
-func (l *Loader) Filter(airports map[string]Airport, f func(Airport) bool) []Airport {
+func (l *airportDataLoader) Filter(airports map[string]Airport, f func(Airport) bool) []Airport {
 	filteredValues := make([]Airport, 0)
 	for _, value := range airports {
 		if f(value) {
@@ -59,7 +67,7 @@ func (l *Loader) Filter(airports map[string]Airport, f func(Airport) bool) []Air
 
 // ReadCountries returns a map of countries, keyed by country code.
 // The data is read from the specified CSV file.
-func (l *Loader) readCountries(filename string) (map[string]string, error) {
+func (l *airportDataLoader) readCountries(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 2
 
@@ -85,7 +93,7 @@ func (l *Loader) readCountries(filename string) (map[string]string, error) {
 
 // ReadRegions returns a map of regions, keyed by region code.
 // The data is read from the specified CSV file.
-func (l *Loader) readRegions(filename string) (map[string]string, error) {
+func (l *airportDataLoader) readRegions(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 3
 
@@ -111,7 +119,7 @@ func (l *Loader) readRegions(filename string) (map[string]string, error) {
 
 // ReadAirports returns a slice of Airports, with country and region names populated.
 // The data is read from the specified CSV file.
-func (l *Loader) readAirports(filename string, countries map[string]string, regions map[string]string) (map[string]Airport, error) {
+func (l *airportDataLoader) readAirports(filename string, countries map[string]string, regions map[string]string) (map[string]Airport, error) {
 	const indexName = 3
 	const indexCountryCode = 8
 	const indexRegionCode = 9
