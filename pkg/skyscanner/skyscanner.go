@@ -145,11 +145,11 @@ type Currency struct {
 	DecimalDigits               int // e.g. 2
 }
 
+// QuoteFinder handles finding quotes.
 type QuoteFinder interface {
 	FindFlightQuotes(*arguments.Arguments)
 }
 
-// QuoteFinder handles finding quotes.
 type skyscannerQuoteFinder struct {
 	logger *logrus.Entry
 }
