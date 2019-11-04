@@ -5,8 +5,6 @@ import (
 
 	"github.com/chrisnappin/flightchecker/pkg/application"
 	"github.com/chrisnappin/flightchecker/pkg/framework"
-	"github.com/chrisnappin/flightchecker/pkg/repository"
-	//"github.com/chrisnappin/flightchecker/pkg/skyscanner"
 )
 
 func main() {
@@ -44,8 +42,9 @@ func main() {
 	mainLogger.Infof("for %d adults, %d children, %d infants\n",
 		arguments.Adults, arguments.Children, arguments.Infants)
 
-	flightRepository := repository.NewRepository(framework.NewLogger("repository", true))
-	err = flightRepository.Initialise()
+	sqliteRepository := framework.NewSQLiteRepository(framework.NewLogger("sqliteRepository", true))
+	quoteRepository := application.NewQuoteRepository(framework.NewLogger("QuoteRepository", true), sqliteRepository)
+	err = quoteRepository.Initialise()
 	if err != nil {
 		mainLogger.Fatal(err)
 	}

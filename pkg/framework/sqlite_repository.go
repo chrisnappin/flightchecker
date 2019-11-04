@@ -1,31 +1,28 @@
-package repository
+package framework
 
 import (
 	"database/sql"
 
-	"github.com/chrisnappin/flightchecker/pkg/framework"
 	_ "github.com/mattn/go-sqlite3" // use sqlite3 driver
 )
 
-// Repository handles being able to load and save quote data from a local DB
-type Repository interface {
+// SQLiteRepository handles being able to load and save quote data from a local DB
+type SQLiteRepository interface {
 	Initialise() error
 }
 
-// sqliteRepository handles loading and saving data.
-// This is a private struct only instantiable via a factory method.
-type sqliteRepository struct {
-	logger framework.Logger
+// sqliteRepositoryService handles loading and saving data.
+type sqliteRepositoryService struct {
+	logger Logger
 }
 
-// NewRepository creates a new instance.
-// This is a factory method (aka constructor) returning an interface.
-func NewRepository(logger framework.Logger) Repository {
-	return &sqliteRepository{logger}
+// NewSQLiteRepository creates a new instance.
+func NewSQLiteRepository(logger Logger) SQLiteRepository {
+	return &sqliteRepositoryService{logger}
 }
 
 // Initialise creates an empty database
-func (r *sqliteRepository) Initialise() error {
+func (r *sqliteRepositoryService) Initialise() error {
 	database, err := sql.Open("sqlite3", "./data/flightchecker.db")
 	if err != nil {
 		return err
