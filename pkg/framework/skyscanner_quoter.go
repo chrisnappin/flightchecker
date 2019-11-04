@@ -1,4 +1,4 @@
-package skyscanner
+package framework
 
 import (
 	"encoding/json"
@@ -9,26 +9,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chrisnappin/flightchecker/pkg/arguments"
-	"github.com/sirupsen/logrus"
+	"github.com/chrisnappin/flightchecker/pkg/domain"
 )
 
-// Response is the top-level result
-type Response struct {
+// SkyScannerResponse is the top-level result
+type SkyScannerResponse struct {
 	SessionKey  string
-	Query       Query
+	Query       SkyScannerQuery
 	Status      string // "UpdatesPending", "UpdatesComplete"
-	Itineraries []Itinerary
-	Legs        []Leg
-	Segments    []Segment
-	Carriers    []Carrier
-	Agents      []Agent
-	Places      []Place
-	Currencies  []Currency
+	Itineraries []SkyScannerItinerary
+	Legs        []SkyScannerLeg
+	Segments    []SkyScannerSegment
+	Carriers    []SkyScannerCarrier
+	Agents      []SkyScannerAgent
+	Places      []SkyScannerPlace
+	Currencies  []SkyScannerCurrency
 }
 
-// Query contains the original input parameters
-type Query struct {
+// SkyScannerQuery contains the original input parameters
+type SkyScannerQuery struct {
 	Country          string
 	Currency         string
 	Locale           string
@@ -44,31 +43,31 @@ type Query struct {
 	GroupPricing     bool
 }
 
-// Itinerary contains a combination of Legs
-type Itinerary struct {
+// SkyScannerItinerary contains a combination of Legs
+type SkyScannerItinerary struct {
 	OutboundLegID      string `json:"OutboundLegId"`
 	InboundLegID       string `json:"InboundLegId"`
-	PricingOptions     []PricingOption
-	BookingDetailsLink BookingDetailsLink
+	PricingOptions     []SkyScannerPricingOption
+	BookingDetailsLink SkyScannerBookingDetailsLink
 }
 
-// PricingOption contains a quote from Agent(s)
-type PricingOption struct {
+// SkyScannerPricingOption contains a quote from Agent(s)
+type SkyScannerPricingOption struct {
 	Agents            []int // Agent ID
 	QuoteAgeInMinutes int
 	Price             float32 // e.g. 758.42
 	DeeplinkURL       string  `json:"DeeplinkUrl"`
 }
 
-// BookingDetailsLink contains links to get booking details
-type BookingDetailsLink struct {
+// SkyScannerBookingDetailsLink contains links to get booking details
+type SkyScannerBookingDetailsLink struct {
 	URI    string `json:"Uri"` // relative REST query to get the booking
 	Body   string // query params to add
 	Method string // e.g. "PUT"
 }
 
-// Leg contains details of part of an itinery, e.g. the outbound flight
-type Leg struct {
+// SkyScannerLeg contains details of part of an itinery, e.g. the outbound flight
+type SkyScannerLeg struct {
 	ID                 string `json:"Id"`
 	SegmentIds         []int
 	OriginStation      int
@@ -81,17 +80,17 @@ type Leg struct {
 	Carriers           []int
 	OperatingCarriers  []int
 	Directionality     string // e.g. "Outbound", "Inbound"
-	FlightNumbers      []FlightNumber
+	FlightNumbers      []SkyScannerFlightNumber
 }
 
-// FlightNumber can be several for same carrier
-type FlightNumber struct {
+// SkyScannerFlightNumber can be several for same carrier
+type SkyScannerFlightNumber struct {
 	FlightNumber string // e.g. "433"
 	CarrierID    int    `json:"CarrierId"`
 }
 
-// Segment details part of a Leg
-type Segment struct {
+// SkyScannerSegment details part of a Leg
+type SkyScannerSegment struct {
 	ID                 int `json:"Id"`
 	OriginStation      int
 	DestinationStation int
@@ -105,8 +104,8 @@ type Segment struct {
 	Directionality     string // e.g. "Outbound", "Inbound"
 }
 
-// Carrier details an Airline
-type Carrier struct {
+// SkyScannerCarrier details an Airline
+type SkyScannerCarrier struct {
 	ID          int    `json:"Id"`
 	Code        string `json:"Code,omitempty"`
 	Name        string
@@ -114,8 +113,8 @@ type Carrier struct {
 	DisplayCode string
 }
 
-// Agent details who has quoted
-type Agent struct {
+// SkyScannerAgent details who has quoted
+type SkyScannerAgent struct {
 	ID                 int `json:"Id"`
 	Name               string
 	ImageURL           string `json:"ImageUrl"`
@@ -124,8 +123,8 @@ type Agent struct {
 	Type               string // e.g. "Airline", "TravelAgent"
 }
 
-// Place details somewhere involved in the quote
-type Place struct {
+// SkyScannerPlace details somewhere involved in the quote
+type SkyScannerPlace struct {
 	ID       int    `json:"Id"`
 	ParentID *int   `json:"ParentId,omitempty"`
 	Code     string // e.g. Airport IATA code "LHR", ISO country code "GB"
@@ -133,8 +132,8 @@ type Place struct {
 	Name     string // e.g. "London Heathrow"
 }
 
-// Currency details how to format monetary values
-type Currency struct {
+// SkyScannerCurrency details how to format monetary values
+type SkyScannerCurrency struct {
 	Code                        string // e.g. "GBP",
 	Symbol                      string // e.g. "£"
 	ThousandsSeparator          string // e.g. ","
@@ -145,127 +144,27 @@ type Currency struct {
 	DecimalDigits               int // e.g. 2
 }
 
-// QuoteFinder handles finding quotes.
-type QuoteFinder interface {
-	FindFlightQuotes(*arguments.Arguments)
+// SkyScannerQuoter handles finding flight quotes from Sky Scanner.
+type SkyScannerQuoter interface {
+	PollForQuotes(sessionKey string, apiHost string, apiKey string) (*SkyScannerResponse, error)
+	StartSearch(arguments *domain.Arguments) (string, error)
 }
 
-type skyscannerQuoteFinder struct {
-	logger *logrus.Entry
+type skyScannerQuoter struct {
+	logger Logger
 }
 
-// NewQuoteFinder creates a new instance.
-func NewQuoteFinder(logger *logrus.Entry) QuoteFinder {
-	return &skyscannerQuoteFinder{logger}
+// NewSkyScannerQuoter creates a new instance.
+func NewSkyScannerQuoter(logger Logger) SkyScannerQuoter {
+	return &skyScannerQuoter{logger}
 }
 
-const (
-	quotesCompleteStatus = "UpdatesComplete"
-)
-
-// FindFlightQuotes calls the skyscanner API to find some flight quotes.
-func (q *skyscannerQuoteFinder) FindFlightQuotes(arguments *arguments.Arguments) {
-
-	/*
-	 * The way the skyscanner API works is that we first make our search,
-	 * then poll for results.
-	 */
-	sessionKey, err := q.startSearch(arguments)
-	if err != nil {
-		q.logger.Fatal(err)
-	}
-
-	/*
-	 * In practice, initial polls return partial results and have status of "UpdatesPending"
-	 * Then after typically 20-30 seconds we get a fully populated result with status of "UpdatesComplete".
-	 */
-	var response *Response
-	for index := 0; index < 6; index++ {
-
-		q.logger.Debugf("Poll %d...\n", index)
-		response, err = q.pollForQuotes(sessionKey, arguments.APIHost, arguments.APIKey)
-		if err != nil {
-			q.logger.Fatal(err)
-		}
-
-		q.logger.Debugf("Polled for quotes, status is %s, found %d itineries\n", response.Status, len(response.Itineraries))
-
-		if response.Status == quotesCompleteStatus {
-			q.logger.Debugf("Quotes are complete...")
-			break
-		}
-
-		time.Sleep(10 * time.Second)
-	}
-
-	if response.Status == quotesCompleteStatus {
-		q.outputQuotes(response)
-	} else {
-		q.logger.Fatalf("Quotes not completed in time, status is still %s", response.Status)
-	}
-}
-
-func (q *skyscannerQuoteFinder) outputQuotes(response *Response) {
-	// maps agent id to agent name
-	agents := make(map[int]string)
-	for _, agent := range response.Agents {
-		agents[agent.ID] = agent.Name
-	}
-
-	// maps leg id to Leg
-	legs := make(map[string]Leg)
-	for _, leg := range response.Legs {
-		legs[leg.ID] = leg
-	}
-
-	// maps segment id to Segment
-	segments := make(map[int]Segment)
-	for _, segment := range response.Segments {
-		segments[segment.ID] = segment
-	}
-
-	// maps carrier id to Carrier
-	carriers := make(map[int]Carrier)
-	for _, carrier := range response.Carriers {
-		carriers[carrier.ID] = carrier
-	}
-
-	q.logger.Infof("Quote completed, found %d flights", len(response.Itineraries))
-	for _, itinerary := range response.Itineraries {
-		for _, pricingOption := range itinerary.PricingOptions {
-			for _, agentID := range pricingOption.Agents {
-				q.logger.Infof("Flight with %s is %.2f\n", agents[agentID], pricingOption.Price)
-
-				outboundLeg := legs[itinerary.OutboundLegID]
-				q.logger.Infof("Outbound Leg: from %s to %s (%d minutes)",
-					outboundLeg.Departure, outboundLeg.Arrival, outboundLeg.Duration)
-				for index, segmentID := range outboundLeg.SegmentIds {
-					segment := segments[segmentID]
-					q.logger.Infof("Outbound segment %d is flight %s from %s to %s (%d minutes) with %s (%s)",
-						index, segment.FlightNumber, segment.DepartureDateTime, segment.ArrivalDateTime,
-						segment.Duration, carriers[segment.Carrier].Name, carriers[segment.Carrier].Code)
-				}
-
-				inboundLeg := legs[itinerary.InboundLegID]
-				q.logger.Infof("Inbound Leg: from %s to %s (%d minutes)",
-					inboundLeg.Departure, inboundLeg.Arrival, inboundLeg.Duration)
-				for index, segmentID := range inboundLeg.SegmentIds {
-					segment := segments[segmentID]
-					q.logger.Infof("Inbound segment %d is flight %s from %s to %s (%d minutes) with %s (%s)",
-						index, segment.FlightNumber, segment.DepartureDateTime, segment.ArrivalDateTime,
-						segment.Duration, carriers[segment.Carrier].Name, carriers[segment.Carrier].Code)
-				}
-			}
-		}
-	}
-}
-
-// pollForQuotes calls the skyscanner "Poll session results" operation, to look for quotes
-func (q *skyscannerQuoteFinder) pollForQuotes(sessionKey string, apiHost string, apiKey string) (*Response, error) {
+// PollForQuotes calls the skyscanner "Poll session results" operation, to look for quotes
+func (q *skyScannerQuoter) PollForQuotes(sessionKey string, apiHost string, apiKey string) (*SkyScannerResponse, error) {
 	const pageIndex = 0
 	const pageSize = 10
 
-	q.logger.Debugf("GET first page of %d quotes...\n", pageSize)
+	q.logger.Debugf("GET first page of %d quotes...", pageSize)
 	url := fmt.Sprintf("https://%s/apiservices/pricing/uk2/v1.0/%%7B%s%%7D?pageIndex=%d&pageSize=%d",
 		apiHost, sessionKey, pageIndex, pageSize)
 
@@ -282,7 +181,7 @@ func (q *skyscannerQuoteFinder) pollForQuotes(sessionKey string, apiHost string,
 		return nil, err
 	}
 
-	q.logger.Debugln("Response received...")
+	q.logger.Debug("Response received...")
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -294,7 +193,7 @@ func (q *skyscannerQuoteFinder) pollForQuotes(sessionKey string, apiHost string,
 		return nil, errors.New("Request rejected")
 	}
 
-	var r Response
+	var r SkyScannerResponse
 	err = json.Unmarshal(body, &r)
 	if err != nil {
 		return nil, err
@@ -302,11 +201,11 @@ func (q *skyscannerQuoteFinder) pollForQuotes(sessionKey string, apiHost string,
 	return &r, nil
 }
 
-// startSearch calls the skyscanner "Create session" operation, which returns a session key.
-func (q *skyscannerQuoteFinder) startSearch(arguments *arguments.Arguments) (string, error) {
+// StartSearch calls the skyscanner "Create session" operation, which returns a session key.
+func (q *skyScannerQuoter) StartSearch(arguments *domain.Arguments) (string, error) {
 	url := "https://" + arguments.APIHost + "/apiservices/pricing/v1.0"
 
-	q.logger.Debugln("POST flight search to create session...")
+	q.logger.Debug("POST flight search to create session...")
 	payload, err := q.formatSearchPayload(arguments)
 	if err != nil {
 		return "", err
@@ -341,7 +240,7 @@ func (q *skyscannerQuoteFinder) startSearch(arguments *arguments.Arguments) (str
 		lastIndex := strings.LastIndex(location, "/")
 		if lastIndex != -1 {
 			key := location[lastIndex+1 : len(location)]
-			q.logger.Infof("The session key is %s\n", key)
+			q.logger.Infof("The session key is %s", key)
 			return key, nil
 		}
 		return "", errors.New("No session key found in URL: " + location)
@@ -349,7 +248,7 @@ func (q *skyscannerQuoteFinder) startSearch(arguments *arguments.Arguments) (str
 	return "", errors.New("No Location returned in response")
 }
 
-func (q *skyscannerQuoteFinder) formatSearchPayload(arguments *arguments.Arguments) (string, error) {
+func (q *skyScannerQuoter) formatSearchPayload(arguments *domain.Arguments) (string, error) {
 	const country = "GB"
 	const currency = "GBP"
 	const locale = "en-GB"
@@ -370,7 +269,7 @@ func (q *skyscannerQuoteFinder) formatSearchPayload(arguments *arguments.Argumen
 
 }
 
-func (q *skyscannerQuoteFinder) logInvalidResponse(res *http.Response) {
+func (q *skyScannerQuoter) logInvalidResponse(res *http.Response) {
 	q.logger.Errorf("Request rejected with %s", res.Status)
 
 	if res.ContentLength != 0 {

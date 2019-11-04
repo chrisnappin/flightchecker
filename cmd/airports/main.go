@@ -4,34 +4,31 @@ import (
 	"os"
 	"strings"
 
-	"github.com/chrisnappin/flightchecker/pkg/data"
-	"github.com/chrisnappin/flightchecker/pkg/logwrapper"
-	"github.com/sirupsen/logrus"
+	"github.com/chrisnappin/flightchecker/pkg/application"
+	"github.com/chrisnappin/flightchecker/pkg/domain"
+	"github.com/chrisnappin/flightchecker/pkg/framework"
 )
 
 func main() {
-	logger := logwrapper.NewLogger("airports", true)
-	loader := data.NewLoader(logwrapper.NewLogger("data", true))
+	mainLogger := framework.NewLogger("airports", true)
+	staticDataLoader := framework.NewStaticDataLoader(framework.NewLogger("staticDataLoader", true))
+	airportLoader := application.NewAirportLoader(framework.NewLogger("airportLoader", true), staticDataLoader)
 
-	LoadAndFilterAirports(logger, loader)
-
-	os.Exit(0)
-}
-
-func LoadAndFilterAirports(logger *logrus.Entry, loader data.Loader) {
-	airports, err := loader.ReadMajorAirports()
+	airports, err := airportLoader.LoadMajorAirports()
 	if err != nil {
-		logger.Fatal(err)
+		mainLogger.Fatal(err)
 	}
 
 	const countryName = "United Kingdom"
 	const regionName = "England"
-	filteredAirports := loader.Filter(airports, func(a data.Airport) bool {
+	filteredAirports := airportLoader.Filter(airports, func(a domain.Airport) bool {
 		return a.Country == countryName && a.Region == regionName && !strings.HasPrefix(a.Name, "RAF ")
 	})
 
-	logger.Info("Matching Airports\n")
+	mainLogger.Info("Matching Airports\n")
 	for _, airport := range filteredAirports {
-		logger.Infof("Name: %s, Code: %s, Region: %s", airport.Name, airport.IataCode, airport.Region)
+		mainLogger.Infof("Name: %s, Code: %s, Region: %s", airport.Name, airport.IataCode, airport.Region)
 	}
+
+	os.Exit(0)
 }

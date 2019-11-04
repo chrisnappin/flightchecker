@@ -1,4 +1,4 @@
-package data
+package framework
 
 import (
 	"bufio"
@@ -6,68 +6,29 @@ import (
 	"io"
 	"os"
 
-	"github.com/sirupsen/logrus"
+	"github.com/chrisnappin/flightchecker/pkg/domain"
 )
 
-// Loader handles being able to load airport data
-type Loader interface {
-	ReadMajorAirports() (map[string]Airport, error)
-	Filter(airports map[string]Airport, f func(Airport) bool) []Airport
+// StaticDataLoader handles being able to load static data
+type StaticDataLoader interface {
+	LoadCountries(filename string) (map[string]string, error)
+	LoadRegions(filename string) (map[string]string, error)
+	LoadAirports(filename string, countries map[string]string, regions map[string]string) (map[string]domain.Airport, error)
 }
 
-// Airport includes details of each airport.
-type Airport struct {
-	Name     string
-	IataCode string
-	Country  string
-	Region   string
+// staticDataLoader handles loading static data.
+type staticDataLoaderService struct {
+	logger Logger
 }
 
-// airportDataLoader handles loading data.
-// This is a private struct only instantiable via a factory method.
-type airportDataLoader struct {
-	logger *logrus.Entry
+// NewStaticDataLoader creates a new instance.
+func NewStaticDataLoader(logger Logger) StaticDataLoader {
+	return &staticDataLoaderService{logger}
 }
 
-// NewLoader creates a new instance.
-// This is a factory method (aka constructor) returning an interface.
-func NewLoader(logger *logrus.Entry) Loader {
-	return &airportDataLoader{logger}
-}
-
-// ReadMajorAirports returns a map of all major airports, keyed by IATA code
-func (l *airportDataLoader) ReadMajorAirports() (map[string]Airport, error) {
-	countries, err := l.readCountries("data/airports/countries.csv")
-	if err != nil {
-		return nil, err
-	}
-
-	regions, err := l.readRegions("data/airports/regions.csv")
-	if err != nil {
-		return nil, err
-	}
-
-	airports, err := l.readAirports("data/airports/airports.csv", countries, regions)
-	if err != nil {
-		return nil, err
-	}
-	return airports, nil
-}
-
-// Filter returns an array of values that pass a filter function
-func (l *airportDataLoader) Filter(airports map[string]Airport, f func(Airport) bool) []Airport {
-	filteredValues := make([]Airport, 0)
-	for _, value := range airports {
-		if f(value) {
-			filteredValues = append(filteredValues, value)
-		}
-	}
-	return filteredValues
-}
-
-// ReadCountries returns a map of countries, keyed by country code.
+// LoadCountries returns a map of countries, keyed by country code.
 // The data is read from the specified CSV file.
-func (l *airportDataLoader) readCountries(filename string) (map[string]string, error) {
+func (l *staticDataLoaderService) LoadCountries(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 2
 
@@ -91,9 +52,9 @@ func (l *airportDataLoader) readCountries(filename string) (map[string]string, e
 	return countries, nil
 }
 
-// ReadRegions returns a map of regions, keyed by region code.
+// LoadRegions returns a map of regions, keyed by region code.
 // The data is read from the specified CSV file.
-func (l *airportDataLoader) readRegions(filename string) (map[string]string, error) {
+func (l *staticDataLoaderService) LoadRegions(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 3
 
@@ -117,9 +78,9 @@ func (l *airportDataLoader) readRegions(filename string) (map[string]string, err
 	return regions, nil
 }
 
-// ReadAirports returns a slice of Airports, with country and region names populated.
+// LoadAirports returns a slice of Airports, with country and region names populated.
 // The data is read from the specified CSV file.
-func (l *airportDataLoader) readAirports(filename string, countries map[string]string, regions map[string]string) (map[string]Airport, error) {
+func (l *staticDataLoaderService) LoadAirports(filename string, countries map[string]string, regions map[string]string) (map[string]domain.Airport, error) {
 	const indexName = 3
 	const indexCountryCode = 8
 	const indexRegionCode = 9
@@ -131,7 +92,7 @@ func (l *airportDataLoader) readAirports(filename string, countries map[string]s
 	}
 	defer csvFile.Close()
 	reader := csv.NewReader(bufio.NewReader(csvFile))
-	airports := make(map[string]Airport)
+	airports := make(map[string]domain.Airport)
 	for {
 		line, err := reader.Read()
 		if err == io.EOF {
@@ -153,7 +114,7 @@ func (l *airportDataLoader) readAirports(filename string, countries map[string]s
 				l.logger.Fatalf("Regions missing name for code %s", line[indexRegionCode])
 			}
 
-			airports[iataCode] = Airport{
+			airports[iataCode] = domain.Airport{
 				Name:     line[indexName],
 				IataCode: iataCode,
 				Country:  countryName,

@@ -1,10 +1,12 @@
-package arguments
+package domain
 
-import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-)
+// Airport includes details of each airport.
+type Airport struct {
+	Name     string
+	IataCode string
+	Country  string
+	Region   string
+}
 
 // Arguments encapsulates all quote criteria and supporting info needed.
 type Arguments struct {
@@ -17,27 +19,4 @@ type Arguments struct {
 	HolidayDuration int    // in nights
 	APIHost         string // from your rapidapi account
 	APIKey          string // from your rapidapi account
-}
-
-// Load reads a JSON file of arguments.
-func Load(filename string) (*Arguments, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	bytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-
-	var arguments Arguments
-
-	err = json.Unmarshal(bytes, &arguments)
-	if err != nil {
-		return nil, err
-	}
-
-	return &arguments, nil
 }

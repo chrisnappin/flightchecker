@@ -16,9 +16,19 @@ A list of all countries' regions (provinces, states, etc.). You need this spread
 
 ## How to build
 * Check the repo out to anywhere outside of $GOROOT
+* Install sqlite3 locally
+  * e.g. on MacOSX `brew install sqlite3`
+* Install gcc locally
+  * e.g. on MacOSX install xcode
+* Build the sqlite 3 driver using GCC
+  * `CGO_ENABLED=1; go install --tags "darwin" github.com/mattn/go-sqlite3`   
 * Set your API Host and Key in `arguments.json`
-* `go build ./...`
-* `~/go/bin/flightchecker`
+* Build the code, doesn't need GCC
+  * `go build ./...`
+* Run the flight checker
+  * `~/go/bin/flightchecker`
+* Or run the airport code finder
+  * `~/go/bin/airports`
 
 
 Intention of the Go tool is not to need Makefiles!
