@@ -9,10 +9,10 @@ import (
 
 func main() {
 	mainLogger := framework.NewLogWrapper("flightchecker", true)
-	staticDataLoader := framework.NewStaticDataLoader(framework.NewLogWrapper("staticDataLoader", true))
-	airportLoader := application.NewAirportLoader(framework.NewLogWrapper("airportLoader", true), staticDataLoader)
+	loader := framework.NewAirportDataLoader(framework.NewLogWrapper("airportDataLoader", true))
+	finder := application.NewFindAirportsService(framework.NewLogWrapper("airportLoader", true), loader)
 
-	airports, err := airportLoader.LoadMajorAirports()
+	airports, err := finder.LoadMajorAirports()
 	if err != nil {
 		mainLogger.Fatal(err)
 	}

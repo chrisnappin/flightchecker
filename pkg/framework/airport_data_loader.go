@@ -9,26 +9,19 @@ import (
 	"github.com/chrisnappin/flightchecker/pkg/domain"
 )
 
-// StaticDataLoader handles being able to load static data
-type StaticDataLoader interface {
-	LoadCountries(filename string) (map[string]string, error)
-	LoadRegions(filename string) (map[string]string, error)
-	LoadAirports(filename string, countries map[string]string, regions map[string]string) (map[string]domain.Airport, error)
-}
-
-// staticDataLoader handles loading static data.
-type staticDataLoaderService struct {
+// sairportDataLoaderService handles loading airport data from static CSV files.
+type airportDataLoaderService struct {
 	logger domain.Logger
 }
 
-// NewStaticDataLoader creates a new instance.
-func NewStaticDataLoader(logger domain.Logger) StaticDataLoader {
-	return &staticDataLoaderService{logger}
+// NewAirportDataLoader creates a new instance.
+func NewAirportDataLoader(logger domain.Logger) *airportDataLoaderService {
+	return &airportDataLoaderService{logger}
 }
 
 // LoadCountries returns a map of countries, keyed by country code.
 // The data is read from the specified CSV file.
-func (l *staticDataLoaderService) LoadCountries(filename string) (map[string]string, error) {
+func (service *airportDataLoaderService) LoadCountries(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 2
 
@@ -48,13 +41,13 @@ func (l *staticDataLoaderService) LoadCountries(filename string) (map[string]str
 		}
 		countries[line[indexCode]] = line[indexName]
 	}
-	l.logger.Debugf("Read %d countries", len(countries))
+	service.logger.Debugf("Read %d countries", len(countries))
 	return countries, nil
 }
 
 // LoadRegions returns a map of regions, keyed by region code.
 // The data is read from the specified CSV file.
-func (l *staticDataLoaderService) LoadRegions(filename string) (map[string]string, error) {
+func (service *airportDataLoaderService) LoadRegions(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 3
 
@@ -74,13 +67,13 @@ func (l *staticDataLoaderService) LoadRegions(filename string) (map[string]strin
 		}
 		regions[line[indexCode]] = line[indexName]
 	}
-	l.logger.Debugf("Read %d regions", len(regions))
+	service.logger.Debugf("Read %d regions", len(regions))
 	return regions, nil
 }
 
 // LoadAirports returns a slice of Airports, with country and region names populated.
 // The data is read from the specified CSV file.
-func (l *staticDataLoaderService) LoadAirports(filename string, countries map[string]string, regions map[string]string) (map[string]domain.Airport, error) {
+func (service *airportDataLoaderService) LoadAirports(filename string, countries map[string]string, regions map[string]string) (map[string]domain.Airport, error) {
 	const indexName = 3
 	const indexCountryCode = 8
 	const indexRegionCode = 9
@@ -106,12 +99,12 @@ func (l *staticDataLoaderService) LoadAirports(filename string, countries map[st
 		if len(iataCode) > 0 && iataCode != "iata_code" {
 			countryName, exists := countries[line[indexCountryCode]]
 			if !exists {
-				l.logger.Fatalf("Countries missing name for code %s", line[indexCountryCode])
+				service.logger.Fatalf("Countries missing name for code %s", line[indexCountryCode])
 			}
 
 			regionName, exists := regions[line[indexRegionCode]]
 			if !exists {
-				l.logger.Fatalf("Regions missing name for code %s", line[indexRegionCode])
+				service.logger.Fatalf("Regions missing name for code %s", line[indexRegionCode])
 			}
 
 			airports[iataCode] = domain.Airport{
@@ -122,6 +115,6 @@ func (l *staticDataLoaderService) LoadAirports(filename string, countries map[st
 			}
 		}
 	}
-	l.logger.Debugf("Read %d airports", len(airports))
+	service.logger.Debugf("Read %d airports", len(airports))
 	return airports, nil
 }
