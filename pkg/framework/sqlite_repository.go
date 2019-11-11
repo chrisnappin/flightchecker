@@ -3,6 +3,7 @@ package framework
 import (
 	"database/sql"
 
+	"github.com/chrisnappin/flightchecker/pkg/domain"
 	_ "github.com/mattn/go-sqlite3" // use sqlite3 driver
 )
 
@@ -13,11 +14,11 @@ type SQLiteRepository interface {
 
 // sqliteRepositoryService handles loading and saving data.
 type sqliteRepositoryService struct {
-	logger Logger
+	logger domain.Logger
 }
 
 // NewSQLiteRepository creates a new instance.
-func NewSQLiteRepository(logger Logger) SQLiteRepository {
+func NewSQLiteRepository(logger domain.Logger) SQLiteRepository {
 	return &sqliteRepositoryService{logger}
 }
 

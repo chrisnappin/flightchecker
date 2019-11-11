@@ -151,11 +151,11 @@ type SkyScannerQuoter interface {
 }
 
 type skyScannerQuoter struct {
-	logger Logger
+	logger domain.Logger
 }
 
 // NewSkyScannerQuoter creates a new instance.
-func NewSkyScannerQuoter(logger Logger) SkyScannerQuoter {
+func NewSkyScannerQuoter(logger domain.Logger) SkyScannerQuoter {
 	return &skyScannerQuoter{logger}
 }
 

@@ -14,6 +14,10 @@ A list of the world's countries. You need this spreadsheet to interpret the coun
 A list of all countries' regions (provinces, states, etc.). You need this spreadsheet to interpret the region codes in the airport file.
 
 
+## Clean Architecture approach
+cmd >> framework >> application >> domain
+ 
+
 ## How to build
 * Check the repo out to anywhere outside of $GOROOT
 * Install sqlite3 locally

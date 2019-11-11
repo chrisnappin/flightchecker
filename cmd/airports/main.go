@@ -10,9 +10,9 @@ import (
 )
 
 func main() {
-	mainLogger := framework.NewLogger("airports", true)
-	staticDataLoader := framework.NewStaticDataLoader(framework.NewLogger("staticDataLoader", true))
-	airportLoader := application.NewAirportLoader(framework.NewLogger("airportLoader", true), staticDataLoader)
+	mainLogger := framework.NewLogWrapper("airports", true)
+	staticDataLoader := framework.NewStaticDataLoader(framework.NewLogWrapper("staticDataLoader", true))
+	airportLoader := application.NewAirportLoader(framework.NewLogWrapper("airportLoader", true), staticDataLoader)
 
 	airports, err := airportLoader.LoadMajorAirports()
 	if err != nil {

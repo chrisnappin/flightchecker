@@ -13,12 +13,12 @@ type FlightQuoter interface {
 }
 
 type flightQuoterService struct {
-	logger           framework.Logger
+	logger           domain.Logger
 	skyScannerQuoter framework.SkyScannerQuoter
 }
 
 // NewFlightQuoter creates a new instance.
-func NewFlightQuoter(logger framework.Logger, skyScannerQuoter framework.SkyScannerQuoter) FlightQuoter {
+func NewFlightQuoter(logger domain.Logger, skyScannerQuoter framework.SkyScannerQuoter) FlightQuoter {
 	return &flightQuoterService{logger, skyScannerQuoter}
 }
 

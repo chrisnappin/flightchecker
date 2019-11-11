@@ -1,6 +1,9 @@
 package application
 
-import "github.com/chrisnappin/flightchecker/pkg/framework"
+import (
+	"github.com/chrisnappin/flightchecker/pkg/domain"
+	"github.com/chrisnappin/flightchecker/pkg/framework"
+)
 
 // QuoteRepository handles being able to load and save quote data
 type QuoteRepository interface {
@@ -9,12 +12,12 @@ type QuoteRepository interface {
 
 // quoteRepositoryService handles loading and saving data.
 type quoteRepositoryService struct {
-	logger           framework.Logger
+	logger           domain.Logger
 	sqliteRepository framework.SQLiteRepository
 }
 
 // NewQuoteRepository creates a new instance.
-func NewQuoteRepository(logger framework.Logger, sqliteRepository framework.SQLiteRepository) QuoteRepository {
+func NewQuoteRepository(logger domain.Logger, sqliteRepository framework.SQLiteRepository) QuoteRepository {
 	return &quoteRepositoryService{logger, sqliteRepository}
 }
 

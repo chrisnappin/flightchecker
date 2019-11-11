@@ -18,11 +18,11 @@ type StaticDataLoader interface {
 
 // staticDataLoader handles loading static data.
 type staticDataLoaderService struct {
-	logger Logger
+	logger domain.Logger
 }
 
 // NewStaticDataLoader creates a new instance.
-func NewStaticDataLoader(logger Logger) StaticDataLoader {
+func NewStaticDataLoader(logger domain.Logger) StaticDataLoader {
 	return &staticDataLoaderService{logger}
 }
 

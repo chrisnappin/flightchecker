@@ -15,11 +15,11 @@ type ArgumentsLoader interface {
 
 // argumentsLoaderService handles loading arguments from a JSON file.
 type argumentsLoaderService struct {
-	logger Logger
+	logger domain.Logger
 }
 
 // NewArgumentsLoader creates a new instance.
-func NewArgumentsLoader(logger Logger) ArgumentsLoader {
+func NewArgumentsLoader(logger domain.Logger) ArgumentsLoader {
 	return &argumentsLoaderService{logger}
 }
 

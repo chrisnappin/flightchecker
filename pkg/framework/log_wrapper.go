@@ -6,27 +6,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Logger handles writing to a log.
-type Logger interface {
-	Debug(args ...interface{})
-	Debugf(format string, args ...interface{})
-	Info(args ...interface{})
-	Infof(format string, args ...interface{})
-	Warn(args ...interface{})
-	Warnf(format string, args ...interface{})
-	Error(args ...interface{})
-	Errorf(format string, args ...interface{})
-	Fatal(args ...interface{})
-	Fatalf(format string, args ...interface{})
-}
-
-// logWrapper handles using the logger.
+// logWrapper wraps the logrus logger in methods compatible with domain.Logger.
 type logWrapper struct {
 	logger *logrus.Entry
 }
 
-// NewLogger creates a logger with the specified name.
-func NewLogger(name string, debug bool) Logger {
+// NewLogWrapper creates a logger with the specified name.
+func NewLogWrapper(name string, debug bool) *logWrapper {
 	logger := logrus.New()
 
 	if debug {

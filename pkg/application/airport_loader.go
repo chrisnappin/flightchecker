@@ -13,12 +13,12 @@ type AirportLoader interface {
 
 // airportLoaderService handles loading data.
 type airportLoaderService struct {
-	logger           framework.Logger
+	logger           domain.Logger
 	staticDataLoader framework.StaticDataLoader
 }
 
 // NewAirportLoader creates a new instance.
-func NewAirportLoader(logger framework.Logger, staticDataLoader framework.StaticDataLoader) AirportLoader {
+func NewAirportLoader(logger domain.Logger, staticDataLoader framework.StaticDataLoader) AirportLoader {
 	return &airportLoaderService{logger, staticDataLoader}
 }
 

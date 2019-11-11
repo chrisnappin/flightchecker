@@ -8,16 +8,16 @@ import (
 )
 
 func main() {
-	mainLogger := framework.NewLogger("flightchecker", true)
-	staticDataLoader := framework.NewStaticDataLoader(framework.NewLogger("staticDataLoader", true))
-	airportLoader := application.NewAirportLoader(framework.NewLogger("airportLoader", true), staticDataLoader)
+	mainLogger := framework.NewLogWrapper("flightchecker", true)
+	staticDataLoader := framework.NewStaticDataLoader(framework.NewLogWrapper("staticDataLoader", true))
+	airportLoader := application.NewAirportLoader(framework.NewLogWrapper("airportLoader", true), staticDataLoader)
 
 	airports, err := airportLoader.LoadMajorAirports()
 	if err != nil {
 		mainLogger.Fatal(err)
 	}
 
-	argumentsLoader := framework.NewArgumentsLoader(framework.NewLogger("argumentsLoader", true))
+	argumentsLoader := framework.NewArgumentsLoader(framework.NewLogWrapper("argumentsLoader", true))
 	arguments, err := argumentsLoader.Load("arguments.json")
 	if err != nil {
 		mainLogger.Fatal(err)
@@ -42,8 +42,8 @@ func main() {
 	mainLogger.Infof("for %d adults, %d children, %d infants\n",
 		arguments.Adults, arguments.Children, arguments.Infants)
 
-	sqliteRepository := framework.NewSQLiteRepository(framework.NewLogger("sqliteRepository", true))
-	quoteRepository := application.NewQuoteRepository(framework.NewLogger("QuoteRepository", true), sqliteRepository)
+	sqliteRepository := framework.NewSQLiteRepository(framework.NewLogWrapper("sqliteRepository", true))
+	quoteRepository := application.NewQuoteRepository(framework.NewLogWrapper("QuoteRepository", true), sqliteRepository)
 	err = quoteRepository.Initialise()
 	if err != nil {
 		mainLogger.Fatal(err)
