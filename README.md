@@ -22,6 +22,7 @@ cmd >> framework >> application >> domain
 For example, to generate a mock for the `Logger` interface defined within the `pkg/domain` directory:
 `~/go/bin/mockery -dir pkg/domain -name Logger`
 (this creates `mocks/Logger.go`) 
+(`name` can also be a comma-separated list of interfaces)
 
 
 ## How to build

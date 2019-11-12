@@ -6,13 +6,6 @@ import (
 	"github.com/chrisnappin/flightchecker/pkg/domain"
 )
 
-// AirportDataLoader handles being able to load airport data
-type AirportDataLoader interface {
-	LoadCountries(filename string) (map[string]string, error)
-	LoadRegions(filename string) (map[string]string, error)
-	LoadAirports(filename string, countries map[string]string, regions map[string]string) (map[string]domain.Airport, error)
-}
-
 // findAirportsService handles finding a range of airports.
 type findAirportsService struct {
 	logger domain.Logger
@@ -20,8 +13,8 @@ type findAirportsService struct {
 }
 
 // NewFindAirportsService creates a new instance.
-func NewFindAirportsService(logger domain.Logger, staticDataLoader AirportDataLoader) *findAirportsService {
-	return &findAirportsService{logger, staticDataLoader}
+func NewFindAirportsService(logger domain.Logger, loader AirportDataLoader) *findAirportsService {
+	return &findAirportsService{logger, loader}
 }
 
 // FindAirports logs all airports within the specified country and region, excluding any matching the prefix (if set).
