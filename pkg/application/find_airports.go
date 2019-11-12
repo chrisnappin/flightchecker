@@ -38,7 +38,7 @@ func (service *findAirportsService) FindAirports(countryName string, regionName 
 		return a.Country == countryName && a.Region == regionName
 	})
 
-	service.logger.Info("Matching Airports\n")
+	service.logger.Info("Matching Airports")
 	for _, airport := range filteredAirports {
 		service.logger.Infof("Name: %s, Code: %s, Region: %s", airport.Name, airport.IataCode, airport.Region)
 	}

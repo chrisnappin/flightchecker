@@ -16,7 +16,13 @@ A list of all countries' regions (provinces, states, etc.). You need this spread
 
 ## Clean Architecture approach
 cmd >> framework >> application >> domain
- 
+
+
+## Using mockery
+For example, to generate a mock for the `Logger` interface defined within the `pkg/domain` directory:
+`~/go/bin/mockery -dir pkg/domain -name Logger`
+(this creates `mocks/Logger.go`) 
+
 
 ## How to build
 * Check the repo out to anywhere outside of $GOROOT
