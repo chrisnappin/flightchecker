@@ -3,8 +3,10 @@ package framework
 import (
 	"testing"
 
+	"github.com/chrisnappin/flightchecker/mocks"
 	"github.com/chrisnappin/flightchecker/pkg/domain"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	gock "gopkg.in/h2non/gock.v1"
 )
 
@@ -25,8 +27,9 @@ func TestFormatSearchPayload_AllValid(t *testing.T) {
 	expected := "inboundDate=2019-11-10&cabinClass=economy&children=2&infants=0&country=GB&currency=GBP&locale=en-GB" +
 		"&originPlace=LHR-sky&destinationPlace=LAX-sky&outboundDate=2019-11-01&adults=2&groupPricing=true"
 
-	quoteFinder := skyScannerQuoter{NewLogWrapper("test", true)}
-	actual, err := quoteFinder.formatSearchPayload(&dummyArguments)
+	mockLogger := &mocks.Logger{}
+	service := skyScannerService{mockLogger}
+	actual, err := service.formatSearchPayload(&dummyArguments)
 
 	assert.Equal(t, expected, actual, "Incorrect payload")
 	assert.Nil(t, err, "Error not expected")
@@ -37,8 +40,9 @@ func TestFormatSearchPayload_InvalidDate(t *testing.T) {
 	brokenArguments := dummyArguments           // struct of primitives so can copy by value
 	brokenArguments.OutboundDate = "01/02/2003" // not YYYY-MM-DD
 
-	quoteFinder := skyScannerQuoter{NewLogWrapper("test", true)}
-	actual, err := quoteFinder.formatSearchPayload(&brokenArguments)
+	mockLogger := &mocks.Logger{}
+	service := skyScannerService{mockLogger}
+	actual, err := service.formatSearchPayload(&brokenArguments)
 
 	assert.Equal(t, "", actual, "No payload expected")
 	assert.Error(t, err, "Error expected")
@@ -55,9 +59,13 @@ func TestStartSearch_HappyPath(t *testing.T) {
 		Reply(201).
 		AddHeader("Location", "https://test.com/aaa/bbb/ccc/abc")
 
-	quoteFinder := skyScannerQuoter{NewLogWrapper("test", true)}
+	mockLogger := &mocks.Logger{}
+	service := skyScannerService{mockLogger}
 
-	sessionKey, err := quoteFinder.StartSearch(&dummyArguments)
+	mockLogger.On("Debug", mock.Anything)
+	mockLogger.On("Infof", mock.Anything, mock.Anything)
+
+	sessionKey, err := service.StartSearch(&dummyArguments)
 	assert.Nil(t, err, "No error expected")
 	assert.Equal(t, "abc", sessionKey, "Invalid session key")
 	assert.Equal(t, gock.IsDone(), true)
@@ -73,9 +81,13 @@ func TestStartSearch_NoLocation(t *testing.T) {
 		HeaderPresent("x-rapidapi-key").
 		Reply(201)
 
-	quoteFinder := skyScannerQuoter{NewLogWrapper("test", true)}
+	mockLogger := &mocks.Logger{}
+	service := skyScannerService{mockLogger}
 
-	sessionKey, err := quoteFinder.StartSearch(&dummyArguments)
+	mockLogger.On("Debug", mock.Anything)
+	mockLogger.On("Infof", mock.Anything, mock.Anything)
+
+	sessionKey, err := service.StartSearch(&dummyArguments)
 	assert.Error(t, err, "Error expected")
 	assert.Equal(t, "", sessionKey, "No session key expected")
 	assert.Equal(t, gock.IsDone(), true)
@@ -92,9 +104,13 @@ func TestStartSearch_NoSessionKey(t *testing.T) {
 		Reply(201).
 		AddHeader("Location", "wibble") // no / character...
 
-	quoteFinder := skyScannerQuoter{NewLogWrapper("test", true)}
+	mockLogger := &mocks.Logger{}
+	service := skyScannerService{mockLogger}
 
-	sessionKey, err := quoteFinder.StartSearch(&dummyArguments)
+	mockLogger.On("Debug", mock.Anything)
+	mockLogger.On("Infof", mock.Anything, mock.Anything)
+
+	sessionKey, err := service.StartSearch(&dummyArguments)
 	assert.Error(t, err, "Error expected")
 	assert.Equal(t, "", sessionKey, "No session key expected")
 	assert.Equal(t, gock.IsDone(), true)
@@ -108,9 +124,14 @@ func TestStartSearch_Rejected(t *testing.T) {
 		Post("/apiservices/pricing/v1.0").
 		Reply(401)
 
-	quoteFinder := skyScannerQuoter{NewLogWrapper("test", true)}
+	mockLogger := &mocks.Logger{}
+	service := skyScannerService{mockLogger}
 
-	sessionKey, err := quoteFinder.StartSearch(&dummyArguments)
+	mockLogger.On("Debug", mock.Anything)
+	mockLogger.On("Infof", mock.Anything, mock.Anything)
+	mockLogger.On("Errorf", mock.Anything, mock.Anything, mock.Anything)
+
+	sessionKey, err := service.StartSearch(&dummyArguments)
 	assert.Error(t, err, "Error expected")
 	assert.Equal(t, "", sessionKey, "No session key expected")
 	assert.Equal(t, gock.IsDone(), true)
@@ -137,9 +158,13 @@ func TestPollForQuote_HappyPath(t *testing.T) {
 		Reply(200).
 		JSON(expected)
 
-	quoteFinder := skyScannerQuoter{NewLogWrapper("test", true)}
+	mockLogger := &mocks.Logger{}
+	service := skyScannerService{mockLogger}
 
-	actual, err := quoteFinder.PollForQuotes("abc", "test.com", "testKey")
+	mockLogger.On("Debug", mock.Anything)
+	mockLogger.On("Debugf", mock.Anything, mock.Anything)
+
+	actual, err := service.PollForQuotes("abc", "test.com", "testKey")
 	assert.Nil(t, err, "No error expected")
 	assert.EqualValues(t, &expected, actual, "Invalid response")
 	assert.Equal(t, gock.IsDone(), true)
@@ -155,9 +180,14 @@ func TestPollForQuote_ServerError(t *testing.T) {
 		Reply(500).
 		BodyString("Oops")
 
-	quoteFinder := skyScannerQuoter{NewLogWrapper("test", true)}
+	mockLogger := &mocks.Logger{}
+	service := skyScannerService{mockLogger}
 
-	actual, err := quoteFinder.PollForQuotes("abc", "test.com", "testKey")
+	mockLogger.On("Debug", mock.Anything)
+	mockLogger.On("Debugf", mock.Anything, mock.Anything)
+	mockLogger.On("Errorf", mock.Anything, mock.Anything, mock.Anything)
+
+	actual, err := service.PollForQuotes("abc", "test.com", "testKey")
 	assert.Error(t, err, "Error expected")
 	assert.Nil(t, actual, "No response expected")
 	assert.Equal(t, gock.IsDone(), true)
@@ -173,9 +203,13 @@ func TestPollForQuote_InvalidResponse(t *testing.T) {
 		Reply(200).
 		BodyString("{\"wibble\":1234,") // un-terminated JSON
 
-	quoteFinder := skyScannerQuoter{NewLogWrapper("test", true)}
+	mockLogger := &mocks.Logger{}
+	service := skyScannerService{mockLogger}
 
-	actual, err := quoteFinder.PollForQuotes("abc", "test.com", "testKey")
+	mockLogger.On("Debug", mock.Anything)
+	mockLogger.On("Debugf", mock.Anything, mock.Anything)
+
+	actual, err := service.PollForQuotes("abc", "test.com", "testKey")
 	assert.Error(t, err, "Error expected")
 	assert.Nil(t, actual, "No response expected")
 	assert.Equal(t, gock.IsDone(), true)

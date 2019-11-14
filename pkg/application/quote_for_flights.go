@@ -12,11 +12,11 @@ type quoteForFlightsService struct {
 	logger           domain.Logger
 	loader           ArgumentsLoader
 	finder           AirportFinder
-	skyScannerQuoter framework.SkyScannerQuoter
+	skyScannerQuoter SkyScannerQuoter
 }
 
 // NewQuoteForFlightsService creates a new instance.
-func NewQuoteForFlightsService(logger domain.Logger, loader ArgumentsLoader, finder AirportFinder, skyScannerQuoter framework.SkyScannerQuoter) *quoteForFlightsService {
+func NewQuoteForFlightsService(logger domain.Logger, loader ArgumentsLoader, finder AirportFinder, skyScannerQuoter SkyScannerQuoter) *quoteForFlightsService {
 	return &quoteForFlightsService{logger, loader, finder, skyScannerQuoter}
 }
 
@@ -58,7 +58,7 @@ func (service *quoteForFlightsService) QuoteForFlights(argumentsFilename string)
 	for index := 0; index < 6; index++ {
 
 		service.logger.Debugf("Poll %d...", index)
-		response, err = service.skyScannerQuoter.PollForQuotes(sessionKey, arguments.APIHost, arguments.APIKey)
+		response, err = service.skyScannerQuoter.PollForQuotes(sessionKey, arguments.APIHost, arguments.APIKey) // TODO: convert to domain model
 		if err != nil {
 			service.logger.Fatal(err)
 		}

@@ -144,27 +144,21 @@ type SkyScannerCurrency struct {
 	DecimalDigits               int // e.g. 2
 }
 
-// SkyScannerQuoter handles finding flight quotes from Sky Scanner.
-type SkyScannerQuoter interface {
-	PollForQuotes(sessionKey string, apiHost string, apiKey string) (*SkyScannerResponse, error)
-	StartSearch(arguments *domain.Arguments) (string, error)
-}
-
-type skyScannerQuoter struct {
+type skyScannerService struct {
 	logger domain.Logger
 }
 
-// NewSkyScannerQuoter creates a new instance.
-func NewSkyScannerQuoter(logger domain.Logger) SkyScannerQuoter {
-	return &skyScannerQuoter{logger}
+// NewSkyScannerService creates a new instance.
+func NewSkyScannerService(logger domain.Logger) *skyScannerService {
+	return &skyScannerService{logger}
 }
 
 // PollForQuotes calls the skyscanner "Poll session results" operation, to look for quotes
-func (q *skyScannerQuoter) PollForQuotes(sessionKey string, apiHost string, apiKey string) (*SkyScannerResponse, error) {
+func (service *skyScannerService) PollForQuotes(sessionKey string, apiHost string, apiKey string) (*SkyScannerResponse, error) {
 	const pageIndex = 0
 	const pageSize = 10
 
-	q.logger.Debugf("GET first page of %d quotes...", pageSize)
+	service.logger.Debugf("GET first page of %d quotes...", pageSize)
 	url := fmt.Sprintf("https://%s/apiservices/pricing/uk2/v1.0/%%7B%s%%7D?pageIndex=%d&pageSize=%d",
 		apiHost, sessionKey, pageIndex, pageSize)
 
@@ -181,7 +175,7 @@ func (q *skyScannerQuoter) PollForQuotes(sessionKey string, apiHost string, apiK
 		return nil, err
 	}
 
-	q.logger.Debug("Response received...")
+	service.logger.Debug("Response received...")
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -189,7 +183,7 @@ func (q *skyScannerQuoter) PollForQuotes(sessionKey string, apiHost string, apiK
 	}
 
 	if res.StatusCode != 200 {
-		q.logInvalidResponse(res)
+		service.logInvalidResponse(res)
 		return nil, errors.New("Request rejected")
 	}
 
@@ -202,11 +196,11 @@ func (q *skyScannerQuoter) PollForQuotes(sessionKey string, apiHost string, apiK
 }
 
 // StartSearch calls the skyscanner "Create session" operation, which returns a session key.
-func (q *skyScannerQuoter) StartSearch(arguments *domain.Arguments) (string, error) {
+func (service *skyScannerService) StartSearch(arguments *domain.Arguments) (string, error) {
 	url := "https://" + arguments.APIHost + "/apiservices/pricing/v1.0"
 
-	q.logger.Debug("POST flight search to create session...")
-	payload, err := q.formatSearchPayload(arguments)
+	service.logger.Debug("POST flight search to create session...")
+	payload, err := service.formatSearchPayload(arguments)
 	if err != nil {
 		return "", err
 	}
@@ -226,7 +220,7 @@ func (q *skyScannerQuoter) StartSearch(arguments *domain.Arguments) (string, err
 	}
 
 	if res.StatusCode != 201 {
-		q.logInvalidResponse(res)
+		service.logInvalidResponse(res)
 		return "", errors.New("Request rejected")
 	}
 
@@ -240,7 +234,7 @@ func (q *skyScannerQuoter) StartSearch(arguments *domain.Arguments) (string, err
 		lastIndex := strings.LastIndex(location, "/")
 		if lastIndex != -1 {
 			key := location[lastIndex+1 : len(location)]
-			q.logger.Infof("The session key is %s", key)
+			service.logger.Infof("The session key is %s", key)
 			return key, nil
 		}
 		return "", errors.New("No session key found in URL: " + location)
@@ -248,7 +242,7 @@ func (q *skyScannerQuoter) StartSearch(arguments *domain.Arguments) (string, err
 	return "", errors.New("No Location returned in response")
 }
 
-func (q *skyScannerQuoter) formatSearchPayload(arguments *domain.Arguments) (string, error) {
+func (service *skyScannerService) formatSearchPayload(arguments *domain.Arguments) (string, error) {
 	const country = "GB"
 	const currency = "GBP"
 	const locale = "en-GB"
@@ -269,16 +263,16 @@ func (q *skyScannerQuoter) formatSearchPayload(arguments *domain.Arguments) (str
 
 }
 
-func (q *skyScannerQuoter) logInvalidResponse(res *http.Response) {
-	q.logger.Errorf("Request rejected with %s", res.Status)
+func (service *skyScannerService) logInvalidResponse(res *http.Response) {
+	service.logger.Errorf("Request rejected with %s", res.Status)
 
 	if res.ContentLength != 0 {
 		defer res.Body.Close()
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			q.logger.Error(err)
+			service.logger.Error(err)
 		} else {
-			q.logger.Errorf("Response was: %s", body)
+			service.logger.Errorf("Response was: %s", body)
 		}
 	}
 }

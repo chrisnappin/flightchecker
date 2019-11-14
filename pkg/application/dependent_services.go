@@ -1,6 +1,9 @@
 package application
 
-import "github.com/chrisnappin/flightchecker/pkg/domain"
+import (
+	"github.com/chrisnappin/flightchecker/pkg/domain"
+	"github.com/chrisnappin/flightchecker/pkg/framework"
+)
 
 //
 // Interfaces for framework services...
@@ -16,6 +19,12 @@ type AirportDataLoader interface {
 // ArgumentsLoader handles being able to load arguments from a JSON file.
 type ArgumentsLoader interface {
 	Load(filename string) (*domain.Arguments, error)
+}
+
+// SkyScannerQuoter handles finding flight quotes from Sky Scanner.
+type SkyScannerQuoter interface {
+	PollForQuotes(sessionKey string, apiHost string, apiKey string) (*framework.SkyScannerResponse, error) // TODO: convert to domain model
+	StartSearch(arguments *domain.Arguments) (string, error)
 }
 
 //

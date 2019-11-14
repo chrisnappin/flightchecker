@@ -14,13 +14,12 @@ func main() {
 	argumentsLoader := framework.NewArgumentsLoader(framework.NewLogWrapper("argumentsLoader", true))
 
 	sqliteRepository := framework.NewSQLiteRepository(framework.NewLogWrapper("sqliteRepository", true))
-	quoteRepository := application.NewQuoteRepository(framework.NewLogWrapper("QuoteRepository", true), sqliteRepository)
-	err := quoteRepository.Initialise()
+	err := sqliteRepository.Initialise()
 	if err != nil {
 		mainLogger.Fatal(err)
 	}
 
-	skyscanner := framework.NewSkyScannerQuoter(framework.NewLogWrapper("skyscannerQuoter", true))
+	skyscanner := framework.NewSkyScannerService(framework.NewLogWrapper("skyscannerQuoter", true))
 	flightQuoter := application.NewQuoteForFlightsService(framework.NewLogWrapper("quoteForFlights", true), argumentsLoader, finder, skyscanner)
 	flightQuoter.QuoteForFlights("arguments.json")
 
