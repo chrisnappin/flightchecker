@@ -144,17 +144,18 @@ type SkyScannerCurrency struct {
 	DecimalDigits               int // e.g. 2
 }
 
-type skyScannerService struct {
+// SkyScannerService handles calling the sky scanner API.
+type SkyScannerService struct {
 	logger domain.Logger
 }
 
 // NewSkyScannerService creates a new instance.
-func NewSkyScannerService(logger domain.Logger) *skyScannerService {
-	return &skyScannerService{logger}
+func NewSkyScannerService(logger domain.Logger) *SkyScannerService {
+	return &SkyScannerService{logger}
 }
 
 // PollForQuotes calls the skyscanner "Poll session results" operation, to look for quotes
-func (service *skyScannerService) PollForQuotes(sessionKey string, apiHost string, apiKey string) (*SkyScannerResponse, error) {
+func (service *SkyScannerService) PollForQuotes(sessionKey string, apiHost string, apiKey string) (*SkyScannerResponse, error) {
 	const pageIndex = 0
 	const pageSize = 10
 
@@ -196,7 +197,7 @@ func (service *skyScannerService) PollForQuotes(sessionKey string, apiHost strin
 }
 
 // StartSearch calls the skyscanner "Create session" operation, which returns a session key.
-func (service *skyScannerService) StartSearch(arguments *domain.Arguments) (string, error) {
+func (service *SkyScannerService) StartSearch(arguments *domain.Arguments) (string, error) {
 	url := "https://" + arguments.APIHost + "/apiservices/pricing/v1.0"
 
 	service.logger.Debug("POST flight search to create session...")
@@ -242,7 +243,7 @@ func (service *skyScannerService) StartSearch(arguments *domain.Arguments) (stri
 	return "", errors.New("No Location returned in response")
 }
 
-func (service *skyScannerService) formatSearchPayload(arguments *domain.Arguments) (string, error) {
+func (service *SkyScannerService) formatSearchPayload(arguments *domain.Arguments) (string, error) {
 	const country = "GB"
 	const currency = "GBP"
 	const locale = "en-GB"
@@ -263,7 +264,7 @@ func (service *skyScannerService) formatSearchPayload(arguments *domain.Argument
 
 }
 
-func (service *skyScannerService) logInvalidResponse(res *http.Response) {
+func (service *SkyScannerService) logInvalidResponse(res *http.Response) {
 	service.logger.Errorf("Request rejected with %s", res.Status)
 
 	if res.ContentLength != 0 {

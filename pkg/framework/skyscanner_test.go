@@ -28,7 +28,7 @@ func TestFormatSearchPayload_AllValid(t *testing.T) {
 		"&originPlace=LHR-sky&destinationPlace=LAX-sky&outboundDate=2019-11-01&adults=2&groupPricing=true"
 
 	mockLogger := &mocks.Logger{}
-	service := skyScannerService{mockLogger}
+	service := SkyScannerService{mockLogger}
 	actual, err := service.formatSearchPayload(&dummyArguments)
 
 	assert.Equal(t, expected, actual, "Incorrect payload")
@@ -41,7 +41,7 @@ func TestFormatSearchPayload_InvalidDate(t *testing.T) {
 	brokenArguments.OutboundDate = "01/02/2003" // not YYYY-MM-DD
 
 	mockLogger := &mocks.Logger{}
-	service := skyScannerService{mockLogger}
+	service := SkyScannerService{mockLogger}
 	actual, err := service.formatSearchPayload(&brokenArguments)
 
 	assert.Equal(t, "", actual, "No payload expected")
@@ -60,7 +60,7 @@ func TestStartSearch_HappyPath(t *testing.T) {
 		AddHeader("Location", "https://test.com/aaa/bbb/ccc/abc")
 
 	mockLogger := &mocks.Logger{}
-	service := skyScannerService{mockLogger}
+	service := SkyScannerService{mockLogger}
 
 	mockLogger.On("Debug", mock.Anything)
 	mockLogger.On("Infof", mock.Anything, mock.Anything)
@@ -82,7 +82,7 @@ func TestStartSearch_NoLocation(t *testing.T) {
 		Reply(201)
 
 	mockLogger := &mocks.Logger{}
-	service := skyScannerService{mockLogger}
+	service := SkyScannerService{mockLogger}
 
 	mockLogger.On("Debug", mock.Anything)
 	mockLogger.On("Infof", mock.Anything, mock.Anything)
@@ -105,7 +105,7 @@ func TestStartSearch_NoSessionKey(t *testing.T) {
 		AddHeader("Location", "wibble") // no / character...
 
 	mockLogger := &mocks.Logger{}
-	service := skyScannerService{mockLogger}
+	service := SkyScannerService{mockLogger}
 
 	mockLogger.On("Debug", mock.Anything)
 	mockLogger.On("Infof", mock.Anything, mock.Anything)
@@ -125,7 +125,7 @@ func TestStartSearch_Rejected(t *testing.T) {
 		Reply(401)
 
 	mockLogger := &mocks.Logger{}
-	service := skyScannerService{mockLogger}
+	service := SkyScannerService{mockLogger}
 
 	mockLogger.On("Debug", mock.Anything)
 	mockLogger.On("Infof", mock.Anything, mock.Anything)
@@ -159,7 +159,7 @@ func TestPollForQuote_HappyPath(t *testing.T) {
 		JSON(expected)
 
 	mockLogger := &mocks.Logger{}
-	service := skyScannerService{mockLogger}
+	service := SkyScannerService{mockLogger}
 
 	mockLogger.On("Debug", mock.Anything)
 	mockLogger.On("Debugf", mock.Anything, mock.Anything)
@@ -181,7 +181,7 @@ func TestPollForQuote_ServerError(t *testing.T) {
 		BodyString("Oops")
 
 	mockLogger := &mocks.Logger{}
-	service := skyScannerService{mockLogger}
+	service := SkyScannerService{mockLogger}
 
 	mockLogger.On("Debug", mock.Anything)
 	mockLogger.On("Debugf", mock.Anything, mock.Anything)
@@ -204,7 +204,7 @@ func TestPollForQuote_InvalidResponse(t *testing.T) {
 		BodyString("{\"wibble\":1234,") // un-terminated JSON
 
 	mockLogger := &mocks.Logger{}
-	service := skyScannerService{mockLogger}
+	service := SkyScannerService{mockLogger}
 
 	mockLogger.On("Debug", mock.Anything)
 	mockLogger.On("Debugf", mock.Anything, mock.Anything)

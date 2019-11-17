@@ -9,19 +9,19 @@ import (
 	"github.com/chrisnappin/flightchecker/pkg/domain"
 )
 
-// sairportDataLoaderService handles loading airport data from static CSV files.
-type airportDataLoaderService struct {
+// AirportDataLoaderService handles loading airport data from static CSV files.
+type AirportDataLoaderService struct {
 	logger domain.Logger
 }
 
 // NewAirportDataLoader creates a new instance.
-func NewAirportDataLoader(logger domain.Logger) *airportDataLoaderService {
-	return &airportDataLoaderService{logger}
+func NewAirportDataLoader(logger domain.Logger) *AirportDataLoaderService {
+	return &AirportDataLoaderService{logger}
 }
 
 // LoadCountries returns a map of countries, keyed by country code.
 // The data is read from the specified CSV file.
-func (service *airportDataLoaderService) LoadCountries(filename string) (map[string]string, error) {
+func (service *AirportDataLoaderService) LoadCountries(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 2
 
@@ -47,7 +47,7 @@ func (service *airportDataLoaderService) LoadCountries(filename string) (map[str
 
 // LoadRegions returns a map of regions, keyed by region code.
 // The data is read from the specified CSV file.
-func (service *airportDataLoaderService) LoadRegions(filename string) (map[string]string, error) {
+func (service *AirportDataLoaderService) LoadRegions(filename string) (map[string]string, error) {
 	const indexCode = 1
 	const indexName = 3
 
@@ -73,7 +73,8 @@ func (service *airportDataLoaderService) LoadRegions(filename string) (map[strin
 
 // LoadAirports returns a slice of Airports, with country and region names populated.
 // The data is read from the specified CSV file.
-func (service *airportDataLoaderService) LoadAirports(filename string, countries map[string]string, regions map[string]string) (map[string]domain.Airport, error) {
+func (service *AirportDataLoaderService) LoadAirports(filename string, countries map[string]string,
+	regions map[string]string) (map[string]domain.Airport, error) {
 	const indexName = 3
 	const indexCountryCode = 8
 	const indexRegionCode = 9

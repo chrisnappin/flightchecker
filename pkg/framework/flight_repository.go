@@ -6,19 +6,19 @@ import (
 	"github.com/chrisnappin/flightchecker/pkg/domain"
 )
 
-// flightRepository handles CRUD operations on flight data.
-type flightRepository struct {
+// FlightRepository handles CRUD operations on flight data.
+type FlightRepository struct {
 	logger domain.Logger
 	db     *sql.DB
 }
 
 // NewFlightRepository creates a new instance.
-func NewFlightRepository(logger domain.Logger, db *sql.DB) *flightRepository {
-	return &flightRepository{logger, db}
+func NewFlightRepository(logger domain.Logger, db *sql.DB) *FlightRepository {
+	return &FlightRepository{logger, db}
 }
 
 // InitialiseSchema populates a blank repository with the schema - ie empty tables.
-func (repo *flightRepository) InitialiseSchema() error {
+func (repo *FlightRepository) InitialiseSchema() error {
 	_, err := withTransaction(repo.db, func(tx *sql.Tx) (interface{}, error) {
 		statement, err := repo.db.Prepare(
 			"CREATE TABLE IF NOT EXISTS airport (code TEST PRIMARY KEY, name TEXT, region TEXT, country TEXT)")
@@ -35,7 +35,7 @@ func (repo *flightRepository) InitialiseSchema() error {
 }
 
 // CreateAirports inserts all specified airports into the repository.
-func (repo *flightRepository) CreateAirports(airports []domain.Airport) error {
+func (repo *FlightRepository) CreateAirports(airports []domain.Airport) error {
 	_, err := withTransaction(repo.db, func(tx *sql.Tx) (interface{}, error) {
 		// inserts all values in the array, in one transaction
 		statement, err := tx.Prepare("INSERT INTO airport (code, name, region, country) VALUES (?, ?, ?, ?)")
@@ -55,7 +55,7 @@ func (repo *flightRepository) CreateAirports(airports []domain.Airport) error {
 }
 
 // ReadAllAirports reads all airports from the repository.
-func (repo *flightRepository) ReadAllAirports() ([]domain.Airport, error) {
+func (repo *FlightRepository) ReadAllAirports() ([]domain.Airport, error) {
 	airports, err := withTransaction(repo.db, func(tx *sql.Tx) (interface{}, error) {
 		rows, err := tx.Query("SELECT code, name, region, country FROM airport")
 		if err != nil {

@@ -8,18 +8,18 @@ import (
 	"github.com/chrisnappin/flightchecker/pkg/domain"
 )
 
-// argumentsLoaderService handles loading arguments from a JSON file.
-type argumentsLoaderService struct {
+// ArgumentsLoaderService handles loading arguments from a JSON file.
+type ArgumentsLoaderService struct {
 	logger domain.Logger
 }
 
 // NewArgumentsLoader creates a new instance.
-func NewArgumentsLoader(logger domain.Logger) *argumentsLoaderService {
-	return &argumentsLoaderService{logger}
+func NewArgumentsLoader(logger domain.Logger) *ArgumentsLoaderService {
+	return &ArgumentsLoaderService{logger}
 }
 
 // Load reads a JSON file of arguments.
-func (service *argumentsLoaderService) Load(filename string) (*domain.Arguments, error) {
+func (service *ArgumentsLoaderService) Load(filename string) (*domain.Arguments, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
