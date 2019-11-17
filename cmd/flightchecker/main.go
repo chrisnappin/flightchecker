@@ -12,15 +12,19 @@ func main() {
 	loader := framework.NewAirportDataLoader(framework.NewLogWrapper("airportDataLoader", true))
 	finder := application.NewFindAirportsService(framework.NewLogWrapper("airportLoader", true), loader)
 	argumentsLoader := framework.NewArgumentsLoader(framework.NewLogWrapper("argumentsLoader", true))
+	skyscanner := framework.NewSkyScannerService(framework.NewLogWrapper("skyscannerQuoter", true))
 
-	sqliteRepository := framework.NewSQLiteRepository(framework.NewLogWrapper("sqliteRepository", true))
-	err := sqliteRepository.Initialise()
+	recreateDatabase := true // TODO - set this via command line flag
+	db, err := framework.OpenDatabase("./data/flightchecker.db", recreateDatabase)
 	if err != nil {
 		mainLogger.Fatal(err)
 	}
+	defer db.Close()
 
-	skyscanner := framework.NewSkyScannerService(framework.NewLogWrapper("skyscannerQuoter", true))
-	flightQuoter := application.NewQuoteForFlightsService(framework.NewLogWrapper("quoteForFlights", true), argumentsLoader, finder, skyscanner)
+	flightRepository := framework.NewFlightRepository(framework.NewLogWrapper("sqliteRepository", true), db)
+	flightQuoter := application.NewQuoteForFlightsService(framework.NewLogWrapper("quoteForFlights", true),
+		argumentsLoader, finder, skyscanner, flightRepository)
+
 	flightQuoter.QuoteForFlights("arguments.json")
 
 	os.Exit(0)

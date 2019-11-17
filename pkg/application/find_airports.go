@@ -24,7 +24,7 @@ func (service *findAirportsService) FindAirports(countryName string, regionName 
 		return err
 	}
 
-	filteredAirports := service.filter(airports, func(a domain.Airport) bool {
+	filteredAirports := domain.AirportMapFilter(airports, func(a domain.Airport) bool {
 		if excludePrefix != "" {
 			return a.Country == countryName && a.Region == regionName && !strings.HasPrefix(a.Name, excludePrefix)
 		}
@@ -56,15 +56,4 @@ func (service *findAirportsService) LoadMajorAirports() (map[string]domain.Airpo
 		return nil, err
 	}
 	return airports, nil
-}
-
-// filter returns an array of values that pass a filter function
-func (service *findAirportsService) filter(airports map[string]domain.Airport, f func(domain.Airport) bool) []domain.Airport {
-	filteredValues := make([]domain.Airport, 0)
-	for _, value := range airports {
-		if f(value) {
-			filteredValues = append(filteredValues, value)
-		}
-	}
-	return filteredValues
 }

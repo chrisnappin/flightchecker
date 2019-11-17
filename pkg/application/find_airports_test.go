@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/chrisnappin/flightchecker/pkg/domain"
 	"github.com/chrisnappin/flightchecker/mocks"
+	"github.com/chrisnappin/flightchecker/pkg/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -98,19 +98,6 @@ func TestLoadMajorAirports_AirportFail(t *testing.T) {
 	assert.Error(t, err, "Expected an error")
 }
 
-// TestFilter_HappyPath tests filter when all is well.
-func TestFilter_HappyPath(t *testing.T) {
-	mockLogger := &mocks.Logger{}
-	mockLoader := &mocks.AirportDataLoader{}
-	service := NewFindAirportsService(mockLogger, mockLoader)
-
-	expected := []domain.Airport{airport2}
-	result := service.filter(dummyAirports, func(airport domain.Airport) bool {
-		return airport.IataCode == airport2.IataCode
-	})
-	assert.Equal(t, result, expected, "Wrong result")
-}
-
 // TestFindAirports_HappyPath tests FindAirports with a prefix.
 func TestFindAirports_WithPrefix(t *testing.T) {
 	mockLogger := &mocks.Logger{}
@@ -121,7 +108,7 @@ func TestFindAirports_WithPrefix(t *testing.T) {
 	mockLoader.On("LoadRegions", mock.Anything).Return(dummyRegions, nil)
 	mockLoader.On("LoadAirports", mock.Anything, mock.Anything, mock.Anything).Return(dummyAirports, nil)
 
-    mockLogger.On("Info", "Matching Airports")
+	mockLogger.On("Info", "Matching Airports")
 	// no matching result logged
 
 	err := service.FindAirports("Country1", "Region1", "A") // filters out the result
@@ -140,7 +127,7 @@ func TestFindAirports_WithoutPrefix(t *testing.T) {
 	mockLoader.On("LoadRegions", mock.Anything).Return(dummyRegions, nil)
 	mockLoader.On("LoadAirports", mock.Anything, mock.Anything, mock.Anything).Return(dummyAirports, nil)
 
-    mockLogger.On("Info", "Matching Airports")
+	mockLogger.On("Info", "Matching Airports")
 	mockLogger.On("Infof", "Name: %s, Code: %s, Region: %s", airport1.Name, airport1.IataCode, airport1.Region)
 
 	err := service.FindAirports("Country1", "Region1", "") // doesn't filter out the result

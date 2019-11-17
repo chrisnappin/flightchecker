@@ -13,11 +13,13 @@ type quoteForFlightsService struct {
 	loader           ArgumentsLoader
 	finder           AirportFinder
 	skyScannerQuoter SkyScannerQuoter
+	flightRepository FlightRepository
 }
 
 // NewQuoteForFlightsService creates a new instance.
-func NewQuoteForFlightsService(logger domain.Logger, loader ArgumentsLoader, finder AirportFinder, skyScannerQuoter SkyScannerQuoter) *quoteForFlightsService {
-	return &quoteForFlightsService{logger, loader, finder, skyScannerQuoter}
+func NewQuoteForFlightsService(logger domain.Logger, loader ArgumentsLoader, finder AirportFinder,
+	skyScannerQuoter SkyScannerQuoter, flightRepository FlightRepository) *quoteForFlightsService {
+	return &quoteForFlightsService{logger, loader, finder, skyScannerQuoter, flightRepository}
 }
 
 const (
@@ -27,7 +29,12 @@ const (
 // QuoteForFlights finds some quotes for flights defined in the arguments.
 func (service *quoteForFlightsService) QuoteForFlights(argumentsFilename string) {
 
-	arguments, originAirport, destinationAirport, err := service.loadArguments(argumentsFilename)
+	airports, err := service.finder.LoadMajorAirports()
+	if err != nil {
+		service.logger.Fatal(err)
+	}
+
+	arguments, originAirport, destinationAirport, err := service.loadArguments(argumentsFilename, airports)
 	if err != nil {
 		service.logger.Fatal(err)
 	}
@@ -40,6 +47,13 @@ func (service *quoteForFlightsService) QuoteForFlights(argumentsFilename string)
 		destinationAirport.Name, destinationAirport.IataCode, destinationAirport.Region, destinationAirport.Country)
 	service.logger.Infof("for %d adults, %d children, %d infants",
 		arguments.Adults, arguments.Children, arguments.Infants)
+
+	// TODO: do a cached-data only option where the schema is preserved
+	service.flightRepository.InitialiseSchema()
+	service.flightRepository.CreateAirports(domain.AirportMapValues(airports))
+
+	// TODO only for testing
+	//service.flightRepository.ReadAllAirports()
 
 	/*
 	 * The way the skyscanner API works is that we first make our search,
@@ -63,7 +77,8 @@ func (service *quoteForFlightsService) QuoteForFlights(argumentsFilename string)
 			service.logger.Fatal(err)
 		}
 
-		service.logger.Debugf("Polled for quotes, status is %s, found %d itineries", response.Status, len(response.Itineraries))
+		service.logger.Debugf("Polled for quotes, status is %s, found %d itineries",
+			response.Status, len(response.Itineraries))
 
 		if response.Status == quotesCompleteStatus {
 			service.logger.Debugf("Quotes are complete...")
@@ -80,14 +95,11 @@ func (service *quoteForFlightsService) QuoteForFlights(argumentsFilename string)
 	}
 }
 
-// loadArguments attempts to load the details to quote for, and returns the arguments, origin airport, dest airport, or an error.
-func (service *quoteForFlightsService) loadArguments(argumentsFilename string) (*domain.Arguments, *domain.Airport, *domain.Airport, error) {
+// loadArguments attempts to load the details to quote for, and returns the arguments, origin airport, dest airport,
+// or an error.
+func (service *quoteForFlightsService) loadArguments(argumentsFilename string, airports map[string]domain.Airport) (
+	*domain.Arguments, *domain.Airport, *domain.Airport, error) {
 	arguments, err := service.loader.Load(argumentsFilename)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	airports, err := service.finder.LoadMajorAirports()
 	if err != nil {
 		return nil, nil, nil, err
 	}

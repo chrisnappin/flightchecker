@@ -27,6 +27,13 @@ type SkyScannerQuoter interface {
 	StartSearch(arguments *domain.Arguments) (string, error)
 }
 
+// FlightRepository handles saving and loading flight data
+type FlightRepository interface {
+	InitialiseSchema() error
+	CreateAirports(airports []domain.Airport) error
+	ReadAllAirports() ([]domain.Airport, error)
+}
+
 //
 // Interfaces for application services...
 //
