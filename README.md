@@ -25,6 +25,16 @@ For example, to generate a mock for the `Logger` interface defined within the `p
 (`name` can also be a comma-separated list of interfaces)
 
 
+## Using sqlite cli
+Run `sqlite3 ./data/flightchecker.db`
+DDL and DML statements are terminated with `;`. 
+Exit using `Control-D`
+Useful _dot_ commands:
+* `.tables` => lists all table names
+* `.schema` => lists create statements for all tables
+* `.schema t` => lists create statement for specified table
+
+
 ## How to build
 * Check the repo out to anywhere outside of $GOROOT
 * Install sqlite3 locally

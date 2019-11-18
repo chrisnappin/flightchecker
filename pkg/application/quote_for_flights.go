@@ -49,11 +49,15 @@ func (service *quoteForFlightsService) QuoteForFlights(argumentsFilename string)
 		arguments.Adults, arguments.Children, arguments.Infants)
 
 	// TODO: do a cached-data only option where the schema is preserved
-	service.flightRepository.InitialiseSchema()
-	service.flightRepository.CreateAirports(domain.AirportMapValues(airports))
+	err = service.flightRepository.InitialiseSchema()
+	if err != nil {
+		service.logger.Fatal(err)
+	}
 
-	// TODO only for testing
-	//service.flightRepository.ReadAllAirports()
+	err = service.flightRepository.CreateAirports(domain.AirportMapValues(airports))
+	if err != nil {
+		service.logger.Fatal(err)
+	}
 
 	/*
 	 * The way the skyscanner API works is that we first make our search,

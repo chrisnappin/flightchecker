@@ -19,9 +19,63 @@ func NewFlightRepository(logger domain.Logger, db *sql.DB) *FlightRepository {
 
 // InitialiseSchema populates a blank repository with the schema - ie empty tables.
 func (repo *FlightRepository) InitialiseSchema() error {
+	tables := []string{
+		`CREATE TABLE airport (
+			code TEXT PRIMARY KEY NOT NULL, 
+			name TEXT NOT NULL, 
+			region TEXT NOT NULL, 
+			country TEXT NOT NULL)`,
+
+		`CREATE TABLE flight_number (
+			flight_number INTEGER PRIMARY KEY NOT NULL, 
+			carrier_name TEXT NOT NULL, 
+			carrier_code TEXT NOT NULL)`,
+
+		`CREATE TABLE journey (
+			id TEXT PRIMARY KEY NOT NULL,
+			direction INTEGER NOT NULL CHECK (direction in (1,2)),
+			flights INTEGER NOT NULL,
+			duration INTEGER NOT NULL,
+			start_time TEXT NOT NULL,
+			end_time TEXT NOT NULL)`,
+
+		`CREATE TABLE flight (
+			id TEXT PRIMARY KEY NOT NULL, 
+			journey_id TEXT NOT NULL,
+			flight_number INTEGER NOT NULL, 
+			start_airport TEXT NOT NULL, 
+			start_time TEXT NOT NULL, 
+			dest_airport TEXT NOT NULL, 
+			dest_time TEXT NOT NULL,
+			duration INTEGER NOT NULL,
+			FOREIGN KEY (journey_id) REFERENCES journey(id),
+			FOREIGN KEY (flight_number) REFERENCES flight_number(flight_number),
+			FOREIGN KEY (start_airport) REFERENCES airport(code),
+			FOREIGN KEY (dest_airport) REFERENCES airport(code))`,
+
+		`CREATE TABLE itinerary (
+			supplier_name TEXT NOT NULL,
+			supplier_type TEXT NOT NULL,
+			amount INTEGER NOT NULL,
+			outbound_journey TEXT NOT NULL,
+			inbound_journey TEXT NOT NULL,
+			FOREIGN KEY (outbound_journey) REFERENCES journey(id),
+			FOREIGN KEY (inbound_journey) REFERENCES journey(id))`,
+	}
+	for _, table := range tables {
+		err := repo.executeDDLStatement(table)
+		if err != nil {
+			repo.logger.Errorf("Error %s when executing table DDL statement: %s", err, table)
+			return err
+		}
+	}
+	return nil
+}
+
+// executeDDLStatement runs a single DDL statement.
+func (repo *FlightRepository) executeDDLStatement(ddl string) error {
 	_, err := withTransaction(repo.db, func(tx *sql.Tx) (interface{}, error) {
-		statement, err := repo.db.Prepare(
-			"CREATE TABLE IF NOT EXISTS airport (code TEST PRIMARY KEY, name TEXT, region TEXT, country TEXT)")
+		statement, err := repo.db.Prepare(ddl)
 		if err != nil {
 			return nil, err
 		}
