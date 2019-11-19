@@ -6,19 +6,19 @@ import (
 	"github.com/chrisnappin/flightchecker/pkg/domain"
 )
 
-// findAirportsService handles finding a range of airports.
-type findAirportsService struct {
+// FindAirportsService handles finding a range of airports.
+type FindAirportsService struct {
 	logger domain.Logger
 	loader AirportDataLoader
 }
 
 // NewFindAirportsService creates a new instance.
-func NewFindAirportsService(logger domain.Logger, loader AirportDataLoader) *findAirportsService {
-	return &findAirportsService{logger, loader}
+func NewFindAirportsService(logger domain.Logger, loader AirportDataLoader) *FindAirportsService {
+	return &FindAirportsService{logger, loader}
 }
 
 // FindAirports logs all airports within the specified country and region, excluding any matching the prefix (if set).
-func (service *findAirportsService) FindAirports(countryName string, regionName string, excludePrefix string) error {
+func (service *FindAirportsService) FindAirports(countryName string, regionName string, excludePrefix string) error {
 	airports, err := service.LoadMajorAirports()
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (service *findAirportsService) FindAirports(countryName string, regionName 
 }
 
 // LoadMajorAirports returns a map of all major airports, keyed by IATA code
-func (service *findAirportsService) LoadMajorAirports() (map[string]domain.Airport, error) {
+func (service *FindAirportsService) LoadMajorAirports() (map[string]domain.Airport, error) {
 	countries, err := service.loader.LoadCountries("data/airports/countries.csv")
 	if err != nil {
 		return nil, err

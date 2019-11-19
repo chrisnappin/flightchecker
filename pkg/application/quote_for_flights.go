@@ -8,7 +8,8 @@ import (
 	"github.com/chrisnappin/flightchecker/pkg/framework"
 )
 
-type quoteForFlightsService struct {
+// QuoteForFlightsService handles finding quotes for flights.
+type QuoteForFlightsService struct {
 	logger           domain.Logger
 	loader           ArgumentsLoader
 	finder           AirportFinder
@@ -18,8 +19,8 @@ type quoteForFlightsService struct {
 
 // NewQuoteForFlightsService creates a new instance.
 func NewQuoteForFlightsService(logger domain.Logger, loader ArgumentsLoader, finder AirportFinder,
-	skyScannerQuoter SkyScannerQuoter, flightRepository FlightRepository) *quoteForFlightsService {
-	return &quoteForFlightsService{logger, loader, finder, skyScannerQuoter, flightRepository}
+	skyScannerQuoter SkyScannerQuoter, flightRepository FlightRepository) *QuoteForFlightsService {
+	return &QuoteForFlightsService{logger, loader, finder, skyScannerQuoter, flightRepository}
 }
 
 const (
@@ -27,7 +28,7 @@ const (
 )
 
 // QuoteForFlights finds some quotes for flights defined in the arguments.
-func (service *quoteForFlightsService) QuoteForFlights(argumentsFilename string) {
+func (service *QuoteForFlightsService) QuoteForFlights(argumentsFilename string) {
 
 	airports, err := service.finder.LoadMajorAirports()
 	if err != nil {
@@ -101,7 +102,7 @@ func (service *quoteForFlightsService) QuoteForFlights(argumentsFilename string)
 
 // loadArguments attempts to load the details to quote for, and returns the arguments, origin airport, dest airport,
 // or an error.
-func (service *quoteForFlightsService) loadArguments(argumentsFilename string, airports map[string]domain.Airport) (
+func (service *QuoteForFlightsService) loadArguments(argumentsFilename string, airports map[string]domain.Airport) (
 	*domain.Arguments, *domain.Airport, *domain.Airport, error) {
 	arguments, err := service.loader.Load(argumentsFilename)
 	if err != nil {
@@ -121,7 +122,7 @@ func (service *quoteForFlightsService) loadArguments(argumentsFilename string, a
 	return arguments, &originAirport, &destinationAirport, nil
 }
 
-func (service *quoteForFlightsService) outputQuotes(response *framework.SkyScannerResponse) {
+func (service *QuoteForFlightsService) outputQuotes(response *framework.SkyScannerResponse) {
 	// maps agent id to agent name
 	agents := make(map[int]string)
 	for _, agent := range response.Agents {
