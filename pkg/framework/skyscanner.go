@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -55,7 +57,7 @@ type SkyScannerItinerary struct {
 type SkyScannerPricingOption struct {
 	Agents            []int // Agent ID
 	QuoteAgeInMinutes int
-	Price             float32 // e.g. 758.42
+	Price             float64 // e.g. 758.42
 	DeeplinkURL       string  `json:"DeeplinkUrl"`
 }
 
@@ -262,6 +264,127 @@ func (service *SkyScannerService) formatSearchPayload(arguments *domain.Argument
 		holidayEndDate.Format(dateFormat), cabinClass, arguments.Children, arguments.Infants, country, currency, locale,
 		arguments.Origin, arguments.Destination, arguments.OutboundDate, arguments.Adults, groupPricing), nil
 
+}
+
+func (service *SkyScannerService) convertToDomain(response *SkyScannerResponse) ([]*domain.Itinerary, error) {
+
+	// maps agent id to Agent
+	agents := make(map[int]SkyScannerAgent)
+	for _, agent := range response.Agents {
+		agents[agent.ID] = agent
+	}
+
+	// maps leg id to Leg
+	legs := make(map[string]SkyScannerLeg)
+	for _, leg := range response.Legs {
+		legs[leg.ID] = leg
+	}
+
+	// maps segment id to Segment
+	segments := make(map[int]SkyScannerSegment)
+	for _, segment := range response.Segments {
+		segments[segment.ID] = segment
+	}
+
+	// maps carrier id to Carrier
+	carriers := make(map[int]SkyScannerCarrier)
+	for _, carrier := range response.Carriers {
+		carriers[carrier.ID] = carrier
+	}
+
+	const timeFormat = "2006-01-02T15:04:05"
+
+	itineraries := []*domain.Itinerary{}
+	for _, responseItinerary := range response.Itineraries {
+		for _, pricingOption := range responseItinerary.PricingOptions {
+			for _, agentID := range pricingOption.Agents {
+				agent, exists := agents[agentID]
+				if !exists {
+					return nil, fmt.Errorf("Unknown agent id %d", agentID)
+				}
+
+				outboundJourney, err := service.convertLegToDomain(
+					legs, segments, responseItinerary.OutboundLegID, domain.Outbound)
+				if err != nil {
+					return nil, err
+				}
+
+				inboundJourney, err := service.convertLegToDomain(
+					legs, segments, responseItinerary.InboundLegID, domain.Inbound)
+				if err != nil {
+					return nil, err
+				}
+
+				itinerary := domain.Itinerary{
+					SupplierName:    agent.Name,
+					SupplierType:    agent.Type,
+					Amount:          int(math.Round(pricingOption.Price * 100)),
+					OutboundJourney: outboundJourney,
+					InboundJourney:  inboundJourney,
+				}
+				itineraries = append(itineraries, &itinerary)
+			}
+		}
+	}
+	return itineraries, nil
+}
+
+func (service *SkyScannerService) convertLegToDomain(legs map[string]SkyScannerLeg, segments map[int]SkyScannerSegment,
+	id string, direction domain.Direction) (*domain.Journey, error) {
+	const timeFormat = "2006-01-02T15:04:05"
+	leg, exists := legs[id]
+	if !exists {
+		return nil, fmt.Errorf("Unknown leg id %s", id)
+	}
+
+	start, err := time.Parse(timeFormat, leg.Departure)
+	if err != nil {
+		return nil, err
+	}
+
+	end, err := time.Parse(timeFormat, leg.Arrival)
+	if err != nil {
+		return nil, err
+	}
+
+	flights := []*domain.Flight{}
+	for _, segmentID := range leg.SegmentIds {
+		segment, exists := segments[segmentID]
+		if !exists {
+			return nil, fmt.Errorf("Unknown segment id %d", segmentID)
+		}
+
+		segmentStart, err := time.Parse(timeFormat, segment.DepartureDateTime)
+		if err != nil {
+			return nil, err
+		}
+
+		segmentEnd, err := time.Parse(timeFormat, segment.ArrivalDateTime)
+		if err != nil {
+			return nil, err
+		}
+
+		flight := domain.Flight{
+			ID:                 strconv.Itoa(segment.ID),
+			FlightNumber:       nil,
+			StartAirport:       nil,
+			StartTime:          segmentStart,
+			DestinationAirport: nil,
+			DestinationTime:    segmentEnd,
+			Duration:           time.Duration(segment.Duration) * time.Minute,
+		}
+		flights = append(flights, &flight)
+	}
+
+	journey := domain.Journey{
+		ID:        id,
+		Direction: direction,
+		Duration:  time.Duration(leg.Duration) * time.Minute,
+		StartTime: start,
+		EndTime:   end,
+		Flights:   flights,
+	}
+	return &journey, nil
 }
 
 func (service *SkyScannerService) logInvalidResponse(res *http.Response) {
