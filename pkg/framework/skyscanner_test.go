@@ -23,6 +23,25 @@ var dummyArguments = domain.Arguments{
 	APIKey:          "testKey",
 }
 
+var airport1 = domain.Airport{
+	Name:     "Airport 1",
+	IataCode: "CODE1",
+	Region:   "Region 1",
+	Country:  "Country 1",
+}
+
+var airport2 = domain.Airport{
+	Name:     "Airport 2",
+	IataCode: "CODE2",
+	Region:   "Region 2",
+	Country:  "Country 2",
+}
+
+var dummyAirports = map[string]domain.Airport{
+	airport1.IataCode: airport1,
+	airport2.IataCode: airport2,
+}
+
 // TestFormatSearchPayload tests formatting the payload of search parameters, with valid input.
 func TestFormatSearchPayload_AllValid(t *testing.T) {
 	expected := "inboundDate=2019-11-10&cabinClass=economy&children=2&infants=0&country=GB&currency=GBP&locale=en-GB" +
@@ -224,7 +243,7 @@ func TestConvertToDomain_Empty(t *testing.T) {
 	mockLogger := &mocks.Logger{}
 	service := SkyScannerService{mockLogger}
 
-	actual, err := service.convertToDomain(&input)
+	actual, err := service.convertToDomain(&input, dummyAirports)
 	assert.Nil(t, err, "No error expected")
 	assert.Equal(t, expected, actual, "Wrong output")
 }
@@ -241,11 +260,15 @@ func TestConvertToDomain_PopulatedValid(t *testing.T) {
 				Direction: domain.Outbound,
 				Flights: []*domain.Flight{
 					&domain.Flight{
-						ID:                 "10",
-						FlightNumber:       nil,
-						StartAirport:       nil,
+						ID: "10",
+						FlightNumber: &domain.FlightNumber{
+							FlightNumber: "123",
+							CarrierName:  "Carrier 1",
+							CarrierCode:  "CA1",
+						},
+						StartAirport:       &airport1,
 						StartTime:          time.Date(2019, time.October, 14, 8, 35, 0, 0, time.UTC),
-						DestinationAirport: nil,
+						DestinationAirport: &airport2,
 						DestinationTime:    time.Date(2019, time.October, 14, 9, 30, 0, 0, time.UTC),
 						Duration:           55 * time.Minute,
 					},
@@ -259,11 +282,15 @@ func TestConvertToDomain_PopulatedValid(t *testing.T) {
 				Direction: domain.Inbound,
 				Flights: []*domain.Flight{
 					&domain.Flight{
-						ID:                 "20",
-						FlightNumber:       nil,
-						StartAirport:       nil,
+						ID: "20",
+						FlightNumber: &domain.FlightNumber{
+							FlightNumber: "456",
+							CarrierName:  "Carrier 2",
+							CarrierCode:  "CA2",
+						},
+						StartAirport:       &airport2,
 						StartTime:          time.Date(2019, time.October, 16, 10, 20, 0, 0, time.UTC),
-						DestinationAirport: nil,
+						DestinationAirport: &airport1,
 						DestinationTime:    time.Date(2019, time.October, 16, 11, 30, 0, 0, time.UTC),
 						Duration:           70 * time.Minute,
 					},
@@ -278,7 +305,7 @@ func TestConvertToDomain_PopulatedValid(t *testing.T) {
 	mockLogger := &mocks.Logger{}
 	service := SkyScannerService{mockLogger}
 
-	actual, err := service.convertToDomain(getExampleResponse(valid))
+	actual, err := service.convertToDomain(getExampleResponse(valid), dummyAirports)
 	assert.Nil(t, err, "No error expected")
 	assert.Equal(t, expected, actual, "Wrong output")
 }
@@ -289,23 +316,68 @@ func TestConvertToDomain_Errors(t *testing.T) {
 	service := SkyScannerService{mockLogger}
 
 	testCases := []struct {
-		option responseOption
+		option  responseOption
+		message string
 	}{
-		{missingAgent},               // response references a non-existant agent
-		{missingOutboundLeg},         // esponse references a non-existant outbound leg
-		{invalidOutboundLegStart},    // response outbound leg has an invalid format start time
-		{invalidOutboundLegEnd},      // response outbound leg has an invalid format arrival time
-		{missingInboundLeg},          // response references a non-existant inbound leg
-		{invalidInboundLegStart},     // response inbound leg has an invalid format start time
-		{invalidInboundLegEnd},       // response inbound leg has an invalid format arrival time
-		{missingOutboundSegment},     // response outbound leg is missing
-		{invalidInboundSegmentStart}, // segment within inbound leg has an invalid format start date time value
-		{invalidOutboundSegmentEnd},  // segment within outbound leg has an invalid format end date time value
+		{missingAgent, "Unknown agent id 1111"},
+		// response references non-existant agent
+
+		{missingOutboundLeg, "Unknown leg id leg1"},
+		// response references non-existant outbound leg
+
+		{invalidOutboundLegStart,
+			"parsing time \"wibble\" as \"2006-01-02T15:04:05\": cannot parse \"wibble\" as \"2006\""},
+		// response outbound leg has an invalid format start time
+
+		{invalidOutboundLegEnd,
+			"parsing time \"wibble\" as \"2006-01-02T15:04:05\": cannot parse \"wibble\" as \"2006\""},
+		// response outbound leg has an invalid format arrival time
+
+		{missingInboundLeg, "Unknown leg id leg2"},
+		// response references a non-existant inbound leg
+
+		{invalidInboundLegStart,
+			"parsing time \"wibble\" as \"2006-01-02T15:04:05\": cannot parse \"wibble\" as \"2006\""},
+		// response inbound leg has an invalid format start time
+
+		{invalidInboundLegEnd,
+			"parsing time \"wibble\" as \"2006-01-02T15:04:05\": cannot parse \"wibble\" as \"2006\""},
+		// response inbound leg has an invalid format arrival time
+
+		{missingOutboundSegment, "Unknown segment id 10"},
+		// response outbound leg is missing
+
+		{invalidInboundSegmentStart,
+			"parsing time \"wibble\" as \"2006-01-02T15:04:05\": cannot parse \"wibble\" as \"2006\""},
+		// segment within inbound leg has an invalid format start date time value
+
+		{invalidOutboundSegmentEnd,
+			"parsing time \"wibble\" as \"2006-01-02T15:04:05\": cannot parse \"wibble\" as \"2006\""},
+		// segment within outbound leg has an invalid format end date time value
+
+		{missingOutboundPlace, "Unknown place id 101"},
+		// segment within outbound leg references non-existent place
+
+		{unknownOutboundAirport, "Unknown airport code NO-SUCH-CODE"},
+		// segment within outbound leg has place not in airport map
+
+		{missingInboundPlace, "Unknown place id 102"},
+		// segment within inbound leg references non-existent place
+
+		{unknownInboundAirport, "Unknown airport code NO-SUCH-CODE"},
+		// segment within inbound leg has place not in airport map
+
+		{missingOutboundCarrier, "Unknown carrier id 2222"},
+		// segment within outbound leg references non-existant carrier
+
+		{missingInboundCarrier, "Unknown carrier id 2223"},
+		// segment within inbound leg references non-existant carrier
 	}
 
-	for _, testrCase := range testCases {
-		actual, err := service.convertToDomain(getExampleResponse(testrCase.option))
+	for _, testCase := range testCases {
+		actual, err := service.convertToDomain(getExampleResponse(testCase.option), dummyAirports)
 		assert.Error(t, err, "Error expected")
+		assert.Equal(t, testCase.message, err.Error())
 		assert.Nil(t, actual, "No output expected")
 	}
 }
@@ -324,6 +396,12 @@ const (
 	missingOutboundSegment
 	invalidInboundSegmentStart
 	invalidOutboundSegmentEnd
+	missingOutboundPlace
+	unknownOutboundAirport
+	missingInboundPlace
+	unknownInboundAirport
+	missingOutboundCarrier
+	missingInboundCarrier
 )
 
 // getExampleResponse returns an example skyscanner format response
@@ -361,20 +439,46 @@ func getExampleResponse(option responseOption) *SkyScannerResponse {
 		},
 		Segments: []SkyScannerSegment{
 			SkyScannerSegment{
-				ID:                10,
-				DepartureDateTime: "2019-10-14T08:35:00",
-				ArrivalDateTime:   "2019-10-14T09:30:00",
-				Carrier:           2222,
-				Duration:          55,
-				FlightNumber:      "123",
+				ID:                 10,
+				DepartureDateTime:  "2019-10-14T08:35:00",
+				ArrivalDateTime:    "2019-10-14T09:30:00",
+				OriginStation:      101,
+				DestinationStation: 102,
+				Carrier:            2222,
+				Duration:           55,
+				FlightNumber:       "123",
 			},
 			SkyScannerSegment{
-				ID:                20,
-				DepartureDateTime: "2019-10-16T10:20:00",
-				ArrivalDateTime:   "2019-10-16T11:30:00",
-				Carrier:           2222,
-				Duration:          70,
-				FlightNumber:      "456",
+				ID:                 20,
+				DepartureDateTime:  "2019-10-16T10:20:00",
+				ArrivalDateTime:    "2019-10-16T11:30:00",
+				OriginStation:      102,
+				DestinationStation: 101,
+				Carrier:            2223,
+				Duration:           70,
+				FlightNumber:       "456",
+			},
+		},
+		Places: []SkyScannerPlace{
+			SkyScannerPlace{
+				ID:   101,
+				Code: "CODE1",
+			},
+			SkyScannerPlace{
+				ID:   102,
+				Code: "CODE2",
+			},
+		},
+		Carriers: []SkyScannerCarrier{
+			SkyScannerCarrier{
+				ID:   2222,
+				Code: "CA1",
+				Name: "Carrier 1",
+			},
+			SkyScannerCarrier{
+				ID:   2223,
+				Code: "CA2",
+				Name: "Carrier 2",
 			},
 		},
 		Agents: []SkyScannerAgent{
@@ -391,7 +495,7 @@ func getExampleResponse(option responseOption) *SkyScannerResponse {
 		response.Agents = []SkyScannerAgent{}
 
 	case missingOutboundLeg:
-		response.Legs = response.Legs[1:1]
+		response.Legs = response.Legs[1:2]
 
 	case invalidOutboundLegStart:
 		response.Legs[0].Departure = "wibble"
@@ -400,7 +504,7 @@ func getExampleResponse(option responseOption) *SkyScannerResponse {
 		response.Legs[0].Arrival = "wibble"
 
 	case missingInboundLeg:
-		response.Legs = response.Legs[0:0]
+		response.Legs = response.Legs[0:1]
 
 	case invalidInboundLegStart:
 		response.Legs[1].Departure = "wibble"
@@ -409,13 +513,31 @@ func getExampleResponse(option responseOption) *SkyScannerResponse {
 		response.Legs[1].Arrival = "wibble"
 
 	case missingOutboundSegment:
-		response.Segments = response.Segments[1:1]
+		response.Segments = response.Segments[1:2]
 
 	case invalidInboundSegmentStart:
 		response.Segments[1].DepartureDateTime = "wibble"
 
 	case invalidOutboundSegmentEnd:
 		response.Segments[0].ArrivalDateTime = "wibble"
+
+	case missingOutboundPlace:
+		response.Places = response.Places[1:2]
+
+	case unknownOutboundAirport:
+		response.Places[0].Code = "NO-SUCH-CODE"
+
+	case missingInboundPlace:
+		response.Places = response.Places[0:1]
+
+	case unknownInboundAirport:
+		response.Places[1].Code = "NO-SUCH-CODE"
+
+	case missingOutboundCarrier:
+		response.Carriers = response.Carriers[1:2]
+
+	case missingInboundCarrier:
+		response.Carriers = response.Carriers[0:1]
 	}
 
 	return &response

@@ -45,7 +45,7 @@ type Arguments struct {
 
 // FlightNumber details the carrier number for a flight (can be several).
 type FlightNumber struct {
-	FlightNumber int
+	FlightNumber string
 	CarrierName  string
 	CarrierCode  string
 }

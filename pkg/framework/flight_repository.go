@@ -27,7 +27,7 @@ func (repo *FlightRepository) InitialiseSchema() error {
 			country TEXT NOT NULL)`,
 
 		`CREATE TABLE flight_number (
-			flight_number INTEGER PRIMARY KEY NOT NULL, 
+			flight_number TEXT PRIMARY KEY NOT NULL, 
 			carrier_name TEXT NOT NULL, 
 			carrier_code TEXT NOT NULL)`,
 

@@ -157,7 +157,8 @@ func NewSkyScannerService(logger domain.Logger) *SkyScannerService {
 }
 
 // PollForQuotes calls the skyscanner "Poll session results" operation, to look for quotes
-func (service *SkyScannerService) PollForQuotes(sessionKey string, apiHost string, apiKey string) (*SkyScannerResponse, error) {
+func (service *SkyScannerService) PollForQuotes(sessionKey string, apiHost string, apiKey string) (
+	*SkyScannerResponse, error) {
 	const pageIndex = 0
 	const pageSize = 10
 
@@ -261,12 +262,13 @@ func (service *SkyScannerService) formatSearchPayload(arguments *domain.Argument
 
 	return fmt.Sprintf("inboundDate=%s&cabinClass=%s&children=%d&infants=%d&country=%s&"+
 		"currency=%s&locale=%s&originPlace=%s-sky&destinationPlace=%s-sky&outboundDate=%s&adults=%d&groupPricing=%t",
-		holidayEndDate.Format(dateFormat), cabinClass, arguments.Children, arguments.Infants, country, currency, locale,
-		arguments.Origin, arguments.Destination, arguments.OutboundDate, arguments.Adults, groupPricing), nil
+		holidayEndDate.Format(dateFormat), cabinClass, arguments.Children, arguments.Infants, country, currency,
+		locale, arguments.Origin, arguments.Destination, arguments.OutboundDate, arguments.Adults, groupPricing), nil
 
 }
 
-func (service *SkyScannerService) convertToDomain(response *SkyScannerResponse) ([]*domain.Itinerary, error) {
+func (service *SkyScannerService) convertToDomain(response *SkyScannerResponse, airports map[string]domain.Airport) (
+	[]*domain.Itinerary, error) {
 
 	// maps agent id to Agent
 	agents := make(map[int]SkyScannerAgent)
@@ -292,6 +294,12 @@ func (service *SkyScannerService) convertToDomain(response *SkyScannerResponse) 
 		carriers[carrier.ID] = carrier
 	}
 
+	// maps place id to Place
+	places := make(map[int]SkyScannerPlace)
+	for _, place := range response.Places {
+		places[place.ID] = place
+	}
+
 	const timeFormat = "2006-01-02T15:04:05"
 
 	itineraries := []*domain.Itinerary{}
@@ -304,13 +312,13 @@ func (service *SkyScannerService) convertToDomain(response *SkyScannerResponse) 
 				}
 
 				outboundJourney, err := service.convertLegToDomain(
-					legs, segments, responseItinerary.OutboundLegID, domain.Outbound)
+					legs, segments, places, carriers, responseItinerary.OutboundLegID, domain.Outbound, airports)
 				if err != nil {
 					return nil, err
 				}
 
 				inboundJourney, err := service.convertLegToDomain(
-					legs, segments, responseItinerary.InboundLegID, domain.Inbound)
+					legs, segments, places, carriers, responseItinerary.InboundLegID, domain.Inbound, airports)
 				if err != nil {
 					return nil, err
 				}
@@ -330,7 +338,8 @@ func (service *SkyScannerService) convertToDomain(response *SkyScannerResponse) 
 }
 
 func (service *SkyScannerService) convertLegToDomain(legs map[string]SkyScannerLeg, segments map[int]SkyScannerSegment,
-	id string, direction domain.Direction) (*domain.Journey, error) {
+	places map[int]SkyScannerPlace, carriers map[int]SkyScannerCarrier, id string, direction domain.Direction,
+	airports map[string]domain.Airport) (*domain.Journey, error) {
 	const timeFormat = "2006-01-02T15:04:05"
 	leg, exists := legs[id]
 	if !exists {
@@ -364,12 +373,31 @@ func (service *SkyScannerService) convertLegToDomain(legs map[string]SkyScannerL
 			return nil, err
 		}
 
+		startAirport, err := service.convertAirport(airports, places, segment.OriginStation)
+		if err != nil {
+			return nil, err
+		}
+
+		destAirport, err := service.convertAirport(airports, places, segment.DestinationStation)
+		if err != nil {
+			return nil, err
+		}
+
+		carrier, exists := carriers[segment.Carrier]
+		if !exists {
+			return nil, fmt.Errorf("Unknown carrier id %d", segment.Carrier)
+		}
+
 		flight := domain.Flight{
-			ID:                 strconv.Itoa(segment.ID),
-			FlightNumber:       nil,
-			StartAirport:       nil,
+			ID: strconv.Itoa(segment.ID),
+			FlightNumber: &domain.FlightNumber{
+				FlightNumber: segment.FlightNumber,
+				CarrierName:  carrier.Name,
+				CarrierCode:  carrier.Code,
+			},
+			StartAirport:       startAirport,
 			StartTime:          segmentStart,
-			DestinationAirport: nil,
+			DestinationAirport: destAirport,
 			DestinationTime:    segmentEnd,
 			Duration:           time.Duration(segment.Duration) * time.Minute,
 		}
@@ -385,6 +413,20 @@ func (service *SkyScannerService) convertLegToDomain(legs map[string]SkyScannerL
 		Flights:   flights,
 	}
 	return &journey, nil
+}
+
+func (service *SkyScannerService) convertAirport(airports map[string]domain.Airport, places map[int]SkyScannerPlace,
+	placeID int) (*domain.Airport, error) {
+	place, exists := places[placeID]
+	if !exists {
+		return nil, fmt.Errorf("Unknown place id %d", placeID)
+	}
+
+	airport, exists := airports[place.Code]
+	if !exists {
+		return nil, fmt.Errorf("Unknown airport code %s", place.Code)
+	}
+	return &airport, nil
 }
 
 func (service *SkyScannerService) logInvalidResponse(res *http.Response) {
