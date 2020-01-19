@@ -2,7 +2,6 @@ package application
 
 import (
 	"github.com/chrisnappin/flightchecker/pkg/domain"
-	"github.com/chrisnappin/flightchecker/pkg/framework"
 )
 
 //
@@ -23,7 +22,7 @@ type ArgumentsLoader interface {
 
 // SkyScannerQuoter handles finding flight quotes from Sky Scanner.
 type SkyScannerQuoter interface {
-	PollForQuotes(sessionKey string, apiHost string, apiKey string) (*framework.SkyScannerResponse, error) // TODO: convert to domain model
+	PollForQuotes(sessionKey string, apiHost string, apiKey string, airports map[string]domain.Airport) (*domain.Quote, error)
 	StartSearch(arguments *domain.Arguments) (string, error)
 }
 

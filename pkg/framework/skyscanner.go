@@ -157,8 +157,8 @@ func NewSkyScannerService(logger domain.Logger) *SkyScannerService {
 }
 
 // PollForQuotes calls the skyscanner "Poll session results" operation, to look for quotes
-func (service *SkyScannerService) PollForQuotes(sessionKey string, apiHost string, apiKey string) (
-	*SkyScannerResponse, error) {
+func (service *SkyScannerService) PollForQuotes(sessionKey string, apiHost string, apiKey string,
+	airports map[string]domain.Airport) (*domain.Quote, error) {
 	const pageIndex = 0
 	const pageSize = 10
 
@@ -196,7 +196,7 @@ func (service *SkyScannerService) PollForQuotes(sessionKey string, apiHost strin
 	if err != nil {
 		return nil, err
 	}
-	return &r, nil
+	return service.convertToDomain(&r, airports)
 }
 
 // StartSearch calls the skyscanner "Create session" operation, which returns a session key.
@@ -268,7 +268,7 @@ func (service *SkyScannerService) formatSearchPayload(arguments *domain.Argument
 }
 
 func (service *SkyScannerService) convertToDomain(response *SkyScannerResponse, airports map[string]domain.Airport) (
-	[]*domain.Itinerary, error) {
+	*domain.Quote, error) {
 
 	// maps agent id to Agent
 	agents := make(map[int]SkyScannerAgent)
@@ -334,7 +334,11 @@ func (service *SkyScannerService) convertToDomain(response *SkyScannerResponse, 
 			}
 		}
 	}
-	return itineraries, nil
+	quote := domain.Quote{
+		Itineraries: itineraries,
+		Complete:    response.Status == "UpdatesComplete",
+	}
+	return &quote, nil
 }
 
 func (service *SkyScannerService) convertLegToDomain(legs map[string]SkyScannerLeg, segments map[int]SkyScannerSegment,

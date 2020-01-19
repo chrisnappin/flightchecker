@@ -161,13 +161,9 @@ func TestStartSearch_Rejected(t *testing.T) {
 func TestPollForQuote_HappyPath(t *testing.T) {
 	defer gock.Off()
 
-	expected := SkyScannerResponse{
-		SessionKey: "abc",
-		Query: SkyScannerQuery{
-			Country:  "GB",
-			Currency: "GBP",
-			Locale:   "en-GB",
-		},
+	expected := &domain.Quote{
+		Itineraries: []*domain.Itinerary{},
+		Complete:    false,
 	}
 
 	gock.New("https://test.com/apiservices/pricing/uk2/v1.0/%7Babc%7D").
@@ -176,7 +172,14 @@ func TestPollForQuote_HappyPath(t *testing.T) {
 		HeaderPresent("x-rapidapi-host").
 		HeaderPresent("x-rapidapi-key").
 		Reply(200).
-		JSON(expected)
+		JSON(SkyScannerResponse{
+			SessionKey: "abc",
+			Query: SkyScannerQuery{
+				Country:  "GB",
+				Currency: "GBP",
+				Locale:   "en-GB",
+			},
+		})
 
 	mockLogger := &mocks.Logger{}
 	service := SkyScannerService{mockLogger}
@@ -184,9 +187,9 @@ func TestPollForQuote_HappyPath(t *testing.T) {
 	mockLogger.On("Debug", mock.Anything)
 	mockLogger.On("Debugf", mock.Anything, mock.Anything)
 
-	actual, err := service.PollForQuotes("abc", "test.com", "testKey")
+	actual, err := service.PollForQuotes("abc", "test.com", "testKey", dummyAirports)
 	assert.Nil(t, err, "No error expected")
-	assert.EqualValues(t, &expected, actual, "Invalid response")
+	assert.EqualValues(t, expected, actual, "Invalid response")
 	assert.Equal(t, gock.IsDone(), true)
 }
 
@@ -207,7 +210,7 @@ func TestPollForQuote_ServerError(t *testing.T) {
 	mockLogger.On("Debugf", mock.Anything, mock.Anything)
 	mockLogger.On("Errorf", mock.Anything, mock.Anything, mock.Anything)
 
-	actual, err := service.PollForQuotes("abc", "test.com", "testKey")
+	actual, err := service.PollForQuotes("abc", "test.com", "testKey", dummyAirports)
 	assert.Error(t, err, "Error expected")
 	assert.Nil(t, actual, "No response expected")
 	assert.Equal(t, gock.IsDone(), true)
@@ -229,7 +232,7 @@ func TestPollForQuote_InvalidResponse(t *testing.T) {
 	mockLogger.On("Debug", mock.Anything)
 	mockLogger.On("Debugf", mock.Anything, mock.Anything)
 
-	actual, err := service.PollForQuotes("abc", "test.com", "testKey")
+	actual, err := service.PollForQuotes("abc", "test.com", "testKey", dummyAirports)
 	assert.Error(t, err, "Error expected")
 	assert.Nil(t, actual, "No response expected")
 	assert.Equal(t, gock.IsDone(), true)
@@ -238,7 +241,10 @@ func TestPollForQuote_InvalidResponse(t *testing.T) {
 // TestConvertToDomain_Empty tests converting to domain values, when the response is empty.
 func TestConvertToDomain_Empty(t *testing.T) {
 	input := SkyScannerResponse{}
-	expected := []*domain.Itinerary{}
+	expected := &domain.Quote{
+		Itineraries: []*domain.Itinerary{},
+		Complete:    false,
+	}
 
 	mockLogger := &mocks.Logger{}
 	service := SkyScannerService{mockLogger}
@@ -250,56 +256,59 @@ func TestConvertToDomain_Empty(t *testing.T) {
 
 // TestConvertToDomain_Populated tests converting to domain values, when the response is populated and valid.
 func TestConvertToDomain_PopulatedValid(t *testing.T) {
-	expected := []*domain.Itinerary{
-		&domain.Itinerary{
-			SupplierName: "Agent1",
-			SupplierType: "Airline",
-			Amount:       10099,
-			OutboundJourney: &domain.Journey{
-				ID:        "leg1",
-				Direction: domain.Outbound,
-				Flights: []*domain.Flight{
-					&domain.Flight{
-						ID: "10",
-						FlightNumber: &domain.FlightNumber{
-							FlightNumber: "123",
-							CarrierName:  "Carrier 1",
-							CarrierCode:  "CA1",
+	expected := domain.Quote{
+		Itineraries: []*domain.Itinerary{
+			&domain.Itinerary{
+				SupplierName: "Agent1",
+				SupplierType: "Airline",
+				Amount:       10099,
+				OutboundJourney: &domain.Journey{
+					ID:        "leg1",
+					Direction: domain.Outbound,
+					Flights: []*domain.Flight{
+						&domain.Flight{
+							ID: "10",
+							FlightNumber: &domain.FlightNumber{
+								FlightNumber: "123",
+								CarrierName:  "Carrier 1",
+								CarrierCode:  "CA1",
+							},
+							StartAirport:       &airport1,
+							StartTime:          time.Date(2019, time.October, 14, 8, 35, 0, 0, time.UTC),
+							DestinationAirport: &airport2,
+							DestinationTime:    time.Date(2019, time.October, 14, 9, 30, 0, 0, time.UTC),
+							Duration:           55 * time.Minute,
 						},
-						StartAirport:       &airport1,
-						StartTime:          time.Date(2019, time.October, 14, 8, 35, 0, 0, time.UTC),
-						DestinationAirport: &airport2,
-						DestinationTime:    time.Date(2019, time.October, 14, 9, 30, 0, 0, time.UTC),
-						Duration:           55 * time.Minute,
 					},
+					Duration:  65 * time.Minute,
+					StartTime: time.Date(2019, time.October, 14, 8, 30, 0, 0, time.UTC),
+					EndTime:   time.Date(2019, time.October, 14, 9, 35, 0, 0, time.UTC),
 				},
-				Duration:  65 * time.Minute,
-				StartTime: time.Date(2019, time.October, 14, 8, 30, 0, 0, time.UTC),
-				EndTime:   time.Date(2019, time.October, 14, 9, 35, 0, 0, time.UTC),
-			},
-			InboundJourney: &domain.Journey{
-				ID:        "leg2",
-				Direction: domain.Inbound,
-				Flights: []*domain.Flight{
-					&domain.Flight{
-						ID: "20",
-						FlightNumber: &domain.FlightNumber{
-							FlightNumber: "456",
-							CarrierName:  "Carrier 2",
-							CarrierCode:  "CA2",
+				InboundJourney: &domain.Journey{
+					ID:        "leg2",
+					Direction: domain.Inbound,
+					Flights: []*domain.Flight{
+						&domain.Flight{
+							ID: "20",
+							FlightNumber: &domain.FlightNumber{
+								FlightNumber: "456",
+								CarrierName:  "Carrier 2",
+								CarrierCode:  "CA2",
+							},
+							StartAirport:       &airport2,
+							StartTime:          time.Date(2019, time.October, 16, 10, 20, 0, 0, time.UTC),
+							DestinationAirport: &airport1,
+							DestinationTime:    time.Date(2019, time.October, 16, 11, 30, 0, 0, time.UTC),
+							Duration:           70 * time.Minute,
 						},
-						StartAirport:       &airport2,
-						StartTime:          time.Date(2019, time.October, 16, 10, 20, 0, 0, time.UTC),
-						DestinationAirport: &airport1,
-						DestinationTime:    time.Date(2019, time.October, 16, 11, 30, 0, 0, time.UTC),
-						Duration:           70 * time.Minute,
 					},
+					Duration:  80 * time.Minute,
+					StartTime: time.Date(2019, time.October, 16, 10, 15, 0, 0, time.UTC),
+					EndTime:   time.Date(2019, time.October, 16, 11, 35, 0, 0, time.UTC),
 				},
-				Duration:  80 * time.Minute,
-				StartTime: time.Date(2019, time.October, 16, 10, 15, 0, 0, time.UTC),
-				EndTime:   time.Date(2019, time.October, 16, 11, 35, 0, 0, time.UTC),
 			},
 		},
+		Complete: true,
 	}
 
 	mockLogger := &mocks.Logger{}
@@ -307,7 +316,7 @@ func TestConvertToDomain_PopulatedValid(t *testing.T) {
 
 	actual, err := service.convertToDomain(getExampleResponse(valid), dummyAirports)
 	assert.Nil(t, err, "No error expected")
-	assert.Equal(t, expected, actual, "Wrong output")
+	assert.Equal(t, expected, *actual, "Wrong output")
 }
 
 // TestConvertToDomain_Errors tests converting to domain values, when the response contains various types of errors.
@@ -488,6 +497,7 @@ func getExampleResponse(option responseOption) *SkyScannerResponse {
 				Type: "Airline",
 			},
 		},
+		Status: "UpdatesComplete",
 	}
 
 	switch option {

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/chrisnappin/flightchecker/pkg/domain"
-	"github.com/chrisnappin/flightchecker/pkg/framework"
 )
 
 // QuoteForFlightsService handles finding quotes for flights.
@@ -22,10 +21,6 @@ func NewQuoteForFlightsService(logger domain.Logger, loader ArgumentsLoader, fin
 	skyScannerQuoter SkyScannerQuoter, flightRepository FlightRepository) *QuoteForFlightsService {
 	return &QuoteForFlightsService{logger, loader, finder, skyScannerQuoter, flightRepository}
 }
-
-const (
-	quotesCompleteStatus = "UpdatesComplete"
-)
 
 // QuoteForFlights finds some quotes for flights defined in the arguments.
 func (service *QuoteForFlightsService) QuoteForFlights(argumentsFilename string) {
@@ -73,19 +68,19 @@ func (service *QuoteForFlightsService) QuoteForFlights(argumentsFilename string)
 	 * In practice, initial polls return partial results and have status of "UpdatesPending"
 	 * Then after typically 20-30 seconds we get a fully populated result with status of "UpdatesComplete".
 	 */
-	var response *framework.SkyScannerResponse
+	var response *domain.Quote
 	for index := 0; index < 6; index++ {
 
 		service.logger.Debugf("Poll %d...", index)
-		response, err = service.skyScannerQuoter.PollForQuotes(sessionKey, arguments.APIHost, arguments.APIKey) // TODO: convert to domain model
+		response, err = service.skyScannerQuoter.PollForQuotes(sessionKey, arguments.APIHost, arguments.APIKey, airports)
 		if err != nil {
 			service.logger.Fatal(err)
 		}
 
-		service.logger.Debugf("Polled for quotes, status is %s, found %d itineries",
-			response.Status, len(response.Itineraries))
+		service.logger.Debugf("Polled for quotes, status is %t, found %d itineries",
+			response.Complete, len(response.Itineraries))
 
-		if response.Status == quotesCompleteStatus {
+		if response.Complete {
 			service.logger.Debugf("Quotes are complete...")
 			break
 		}
@@ -93,10 +88,10 @@ func (service *QuoteForFlightsService) QuoteForFlights(argumentsFilename string)
 		time.Sleep(10 * time.Second)
 	}
 
-	if response.Status == quotesCompleteStatus {
+	if response.Complete {
 		service.outputQuotes(response)
 	} else {
-		service.logger.Fatalf("Quotes not completed in time, status is still %s", response.Status)
+		service.logger.Fatalf("Quotes not completed in time")
 	}
 }
 
@@ -122,57 +117,46 @@ func (service *QuoteForFlightsService) loadArguments(argumentsFilename string, a
 	return arguments, &originAirport, &destinationAirport, nil
 }
 
-func (service *QuoteForFlightsService) outputQuotes(response *framework.SkyScannerResponse) {
-	// maps agent id to agent name
-	agents := make(map[int]string)
-	for _, agent := range response.Agents {
-		agents[agent.ID] = agent.Name
-	}
-
-	// maps leg id to Leg
-	legs := make(map[string]framework.SkyScannerLeg)
-	for _, leg := range response.Legs {
-		legs[leg.ID] = leg
-	}
-
-	// maps segment id to Segment
-	segments := make(map[int]framework.SkyScannerSegment)
-	for _, segment := range response.Segments {
-		segments[segment.ID] = segment
-	}
-
-	// maps carrier id to Carrier
-	carriers := make(map[int]framework.SkyScannerCarrier)
-	for _, carrier := range response.Carriers {
-		carriers[carrier.ID] = carrier
-	}
-
+func (service *QuoteForFlightsService) outputQuotes(response *domain.Quote) {
+	const dayTimeFormat = "2006-01-02 15:04"
 	service.logger.Infof("Quote completed, found %d flights", len(response.Itineraries))
 	for _, itinerary := range response.Itineraries {
-		for _, pricingOption := range itinerary.PricingOptions {
-			for _, agentID := range pricingOption.Agents {
-				service.logger.Infof("Flight with %s is %.2f", agents[agentID], pricingOption.Price)
+		service.logger.Infof("Flight with %s (%s) is %s",
+			itinerary.SupplierName, itinerary.SupplierType, formatPrice(itinerary.Amount))
 
-				outboundLeg := legs[itinerary.OutboundLegID]
-				service.logger.Infof("Outbound Leg: from %s to %s (%d minutes)",
-					outboundLeg.Departure, outboundLeg.Arrival, outboundLeg.Duration)
-				for index, segmentID := range outboundLeg.SegmentIds {
-					segment := segments[segmentID]
-					service.logger.Infof("Outbound segment %d is flight %s from %s to %s (%d minutes) with %s (%s)",
-						index, segment.FlightNumber, segment.DepartureDateTime, segment.ArrivalDateTime,
-						segment.Duration, carriers[segment.Carrier].Name, carriers[segment.Carrier].Code)
-				}
+		outboundJourney := itinerary.OutboundJourney
+		service.logger.Infof("Outbound Journey takes %s", formatFlightDuration(outboundJourney.Duration))
+		for index, flight := range outboundJourney.Flights {
+			service.logger.Infof("Outbound flight %d is flight %s%s (%s) from %s (%s) to %s (%s)",
+				index+1, flight.FlightNumber.CarrierCode, flight.FlightNumber.FlightNumber,
+				flight.FlightNumber.CarrierName,
+				flight.StartAirport.Name, flight.StartAirport.IataCode,
+				flight.DestinationAirport.Name, flight.DestinationAirport.IataCode)
+			service.logger.Infof("%s to %s",
+				flight.StartTime.Format(dayTimeFormat),
+				flight.DestinationTime.Format(dayTimeFormat))
+		}
 
-				inboundLeg := legs[itinerary.InboundLegID]
-				service.logger.Infof("Inbound Leg: from %s to %s (%d minutes)",
-					inboundLeg.Departure, inboundLeg.Arrival, inboundLeg.Duration)
-				for index, segmentID := range inboundLeg.SegmentIds {
-					segment := segments[segmentID]
-					service.logger.Infof("Inbound segment %d is flight %s from %s to %s (%d minutes) with %s (%s)",
-						index, segment.FlightNumber, segment.DepartureDateTime, segment.ArrivalDateTime,
-						segment.Duration, carriers[segment.Carrier].Name, carriers[segment.Carrier].Code)
-				}
-			}
+		inboundJourney := itinerary.InboundJourney
+		service.logger.Infof("Inbound Journey takes %s", formatFlightDuration(inboundJourney.Duration))
+		for index, flight := range inboundJourney.Flights {
+			service.logger.Infof("Inbound flight %d is flight %s%s (%s) from %s (%s) to %s (%s)",
+				index+1, flight.FlightNumber.CarrierCode, flight.FlightNumber.FlightNumber,
+				flight.FlightNumber.CarrierName,
+				flight.StartAirport.Name, flight.StartAirport.IataCode,
+				flight.DestinationAirport.Name, flight.DestinationAirport.IataCode)
+			service.logger.Infof("%s to %s",
+				flight.StartTime.Format(dayTimeFormat),
+				flight.DestinationTime.Format(dayTimeFormat))
 		}
 	}
+}
+
+func formatPrice(amount int) string {
+	return fmt.Sprintf("%.2f", float64(amount)/100.0)
+}
+
+func formatFlightDuration(duration time.Duration) string {
+	minutes := duration.Minutes()
+	return fmt.Sprintf("%.f hrs, %d mins", minutes/60.0, int(minutes)%60)
 }

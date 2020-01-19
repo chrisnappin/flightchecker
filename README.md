@@ -56,6 +56,7 @@ Intention of the Go tool is not to need Makefiles!
 
 Run `go task ./...` where `task` can be
 * clean => removes object files from source dirs, mostly un-needed!
+  * e.g. `go clean -cache ./...` - removes cached unit tests
 * list => lists all packages and imported modules
 * get => downloads and install code or modules (to the $GOPATH)
   * e.g. `go get github.com/sirupsen/logrus` (uses latest version) - updates `go.mod`

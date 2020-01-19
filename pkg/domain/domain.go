@@ -90,3 +90,9 @@ type Itinerary struct {
 	OutboundJourney *Journey
 	InboundJourney  *Journey
 }
+
+// Quote details several itineraries
+type Quote struct {
+	Itineraries []*Itinerary
+	Complete    bool
+}
